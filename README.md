@@ -1,8 +1,9 @@
-#ppLab - Park Out
+ppLab - ParkOut
+-------------------------
 Projeto para a disciplina de Paradigmas da Programação.
 
-Realizado por:
-
-Gonçalo Marques (30012478)
-
-Gonçalo Pardelhas (30014665)
+Feito por:
+  
+- Gonçalo Marques(30012478)
+  
+- Gonçalo Pardelhas(30014665)
