@@ -1,6 +1,8 @@
 #include "board.h"
 
-Board::Board(int r, int c) : m_rows(r), m_cols(c) {
+Board::Board(int r, int c) 
+    : m_rows(r), 
+    m_cols(c) {
     m_slots.resize(6, false); // Valor padrão inicial
 }
 
@@ -16,7 +18,7 @@ void Board::addBus(const Bus& bus) {
     m_buses.push_back(bus);
 }
 
-// CORREÇÃO: Remapeamento do tamanho físico usando estritamente a fórmula (Capacidade / 2)
+// Remapeamento do tamanho físico usando estritamente a fórmula (Capacidade / 2)
 int Board::getBusLength(int capacity) const {
     return capacity / 2;
 }
