@@ -11,16 +11,18 @@ class GameController : public QObject
     Q_OBJECT
 
     // PROPRIEDADES QML BÁSICAS 
-    Q_PROPERTY(bool inMenu READ inMenu WRITE setInMenu NOTIFY inMenuChanged)
+    Q_PROPERTY(int moveCount READ moveCount NOTIFY moveCountChanged)
+    Q_PROPERTY(bool inMenu READ inMenu NOTIFY inMenuChanged)
     Q_PROPERTY(QString gameState READ gameState NOTIFY gameStateChanged)
-    Q_PROPERTY(int currentLevel READ currentLevel NOTIFY currentLevelChanged)
+    Q_PROPERTY(int currentLevel READ currentLevel NOTIFY gameStateChanged)
 
     // Dimensionamento do tabuleiro acoplado à classe Board
-    Q_PROPERTY(int rows READ rows NOTIFY boardDimensionsChanged)
-    Q_PROPERTY(int cols READ cols NOTIFY boardDimensionsChanged)
+    Q_PROPERTY(int rows READ rows CONSTANT)
+    Q_PROPERTY(int cols READ cols CONSTANT)
 
     Q_PROPERTY(QVariantList buses READ getBusesForDisplay NOTIFY dataChanged)
-
+    Q_PROPERTY(QVariantList parkedBuses READ getParkedBusesForDisplay NOTIFY dataChanged)
+    Q_PROPERTY(int numSlots READ numSlots NOTIFY dataChanged)
 
 public:
     explicit GameController(QObject *parent = nullptr);
@@ -29,12 +31,11 @@ public:
     // Getters fundamentais
     bool inMenu() const;
     QString gameState() const;
-    QVariantList buses() const;
     int currentLevel() const;
     int rows() const;
     int cols() const;
     int moveCount() const;
-
+    
     // Métodos de controlo de fluxo iniciais
     Q_INVOKABLE void setInMenu(bool inMenu);
     Q_INVOKABLE void goToMenu();
@@ -47,9 +48,17 @@ signals:
     void currentLevelChanged();
     void boardDimensionsChanged();
     void moveCountChanged();
-    void showNotification(const QString &message);
+    void showNotification(QString message);
+
 
 private:
+    struct ParkedBusInfo {
+        Bus bus;
+        int slotIndex;
+    };
+
+    std::vector<ParkedBusInfo> m_parkedBuses;
+
     bool m_inMenu;
     QString m_gameState;
     int m_currentLevel; // "PLAYING", "WON", "LOST"

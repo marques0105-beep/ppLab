@@ -1,5 +1,5 @@
 #include "gamecontroller.h"
-#include <QTimer>
+#include <QDebug>
 
 GameController::GameController(QObject *parent)
     : QObject(parent),
@@ -34,9 +34,11 @@ QVariantList GameController::getBusesForDisplay() const {
         map["color"]    = bus.getColor();
         map["capacity"] = bus.getCapacity();
         QString dStr = "r";
+
         if (bus.getDirection() == Direction::Left) dStr = "l";
         else if (bus.getDirection() == Direction::Up) dStr = "u";
         else if (bus.getDirection() == Direction::Down) dStr = "d";
+
         map["direction"] = dStr;
         map["row"] = bus.getRow();
         map["col"] = bus.getCol();
@@ -91,51 +93,63 @@ void GameController::setupTestLevel()
 }
 
 // MÉTODO DE INTERAÇÃO 
-void GameController::handleBusClick(int busIndex)
-{
-    // Salvaguarda: verificar se o tabuleiro existe e se o índice é válido
-    if (!m_board || busIndex < 0 || busIndex >= static_cast<int>(m_board->getBuses().size())) {
+void GameController::handleBusClick(int busIndex) {
+    if (m_gameState != "PLAYING") return;
+
+    auto& buses = m_board.getBusesMutable();
+    if (busIndex < 0 || busIndex >= static_cast<int>(buses.size())) return;
+
+    Bus& bus = buses[busIndex];
+    if (bus.getRow() == -10 || bus.getCol() == -10) return; // já estacionado
+
+    int currentR = bus.getRow();
+    int currentC = bus.getCol();
+    int len = m_board.getBusLength(bus.getCapacity());
+
+    int finalR = currentR, finalC = currentC;
+    bool pathBlocked = false, exitedBoard = false;
+
+    while (true) {
+        if (bus.getDirection() == Direction::Right) {
+            if (finalC + len >= m_board.getCols()) { exitedBoard = true; break; }
+            if (m_board.isOccupied(finalR, finalC + len, busIndex)) { pathBlocked = true; break; }
+            finalC++;
+        }
+        else if (bus.getDirection() == Direction::Left) {
+            if (finalC - 1 < 0) { exitedBoard = true; break; }
+            if (m_board.isOccupied(finalR, finalC - 1, busIndex)) { pathBlocked = true; break; }
+            finalC--;
+        }
+        else if (bus.getDirection() == Direction::Down) {
+            if (finalR + len >= m_board.getRows()) { exitedBoard = true; break; }
+            if (m_board.isOccupied(finalR + len, finalC, busIndex)) { pathBlocked = true; break; }
+            finalR++;
+        }
+        else if (bus.getDirection() == Direction::Up) {
+            if (finalR - 1 < 0) { exitedBoard = true; break; }
+            if (m_board.isOccupied(finalR - 1, finalC, busIndex)) { pathBlocked = true; break; }
+            finalR--;
+        }
+    }
+
+    if (finalR == currentR && finalC == currentC && pathBlocked) {
+        emit showNotification("⚠️ Caminho bloqueado!");
         return;
     }
 
-    // Obter uma referência ao autocarro clicado para o podermos modificar
-    // Nota: Como vi na tua Imagem 6 que tens o método getBusesMutable(), usamos esse!
-    std::vector<Bus>& busesList = m_board->getBusesMutable();
-    Bus& targetBus = busesList[busIndex];
-
-    // Guardar as coordenadas atuais do autocarro
-    int currentRow = targetBus.row();
-    int currentCol = targetBus.col();
-
-    // Mover apenas UMA célula na direção correspondente (Lógica cega do Passo 5.1)
-    switch (targetBus.direction()) {
-        case 'r': // Right (Direita) -> Avança na coluna
-            currentCol++;
-            break;
-        case 'l': // Left (Esquerda) -> Recua na coluna
-            currentCol--;
-            break;
-        case 'd': // Down (Baixo) -> Avança na linha
-            currentRow++;
-            break;
-        case 'u': // Up (Cima) -> Recua na linha
-            currentRow--;
-            break;
-        default:
-            break;
+    if (exitedBoard) {
+        // Vai estacionar – isso será implementado no Passo 7
+        emit showNotification("🚌 Saiu do tabuleiro! (estacionamento em breve)");
+        // Por agora, não estaciona, só avisa.
+        return;
     }
 
-    // Atualizar a posição do autocarro com as novas coordenadas
-    targetBus.setPosition(currentRow, currentCol);
-
-    // Incrementar o contador de movimentos do jogo (moveCount)
-    m_moveCount++;
-    emit moveCountChanged();
-
-    // Avisar o QML que a lista de autocarros mudou para ele se redesenhar no ecrã
-    emit busesChanged();
-
-    qDebug() << "Autocarro" << busIndex << "moveu-se para a posição:" << currentRow << "," << currentCol;
+    if (finalR != currentR || finalC != currentC) {
+        bus.setPosition(finalR, finalC);
+        m_moveCount++;
+        emit moveCountChanged();
+        emit dataChanged();
+    }
 }
 
 void GameController::handleBusClick(int busIndex) {
@@ -178,9 +192,20 @@ void GameController::handleBusClick(int busIndex) {
 
 void GameController::loadLevelAsync(int) {}
 
-void GameController::setupTestLevel() {}
+void GameController::setupTestLevel()
+{
+    m_moveCount = 0;
+    emit moveCountChanged();
+    setInMenu(false);
+    emit showNotification("Nível de Teste Preparado!");
+}
 
-void GameController::goToMenu() {}
+void GameController::goToMenu()
+{
+    setInMenu(true);
+    m_moveCount = 0;
+    emit moveCountChanged();
+}
 
 int GameController::getLevelHighScore(int) const { return 0; }
 
