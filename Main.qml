@@ -27,9 +27,10 @@ Window {
     }
 
     Column {
-        spacing: 12
+        id: gameColumn
         anchors.centerIn: parent
         width: root.boardSize
+        spacing: 12
 
         // Notificação
         Rectangle {
@@ -65,7 +66,51 @@ Window {
             }
         }
 
-        // Plataformas de estacionamento
+        // Fila de passageiros
+        Column {
+            spacing: 6
+            width: root.boardSize
+            anchors.horizontalCenter: parent.horizontalCenter
+
+            Text {
+                text: "Próximos Passageiros:"
+                color: "white"
+                font.pointSize: 14
+                font.bold: true
+                anchors.horizontalCenter: parent.horizontalCenter
+            }
+
+            Flickable {
+                width: root.boardSize
+                height: 45
+                contentWidth: passengerRow.implicitWidth
+                contentHeight: height
+                clip: true
+                flickableDirection: Flickable.HorizontalFlick
+
+                Row {
+                    id: passengerRow
+                    spacing: 10
+                    Repeater {
+                        model: gameCtrl.passengerQueue
+                        Rectangle {
+                            width: 35; height: 35; radius: 17.5
+                            color: modelData.color
+                            border.color: index === 0 ? "#f1c40f" : "white"
+                            border.width: index === 0 ? 3 : 1
+                            Text {
+                                anchors.centerIn: parent
+                                text: index === 0 ? "🏃" : (index + 1)
+                                font.pixelSize: index === 0 ? 16 : 11
+                                color: "white"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Plataformas
         Item {
             width: root.boardSize
             height: 80
