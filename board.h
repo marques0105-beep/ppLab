@@ -8,27 +8,24 @@ class Board {
 public:
     Board(int r, int c);
 
+    // Getters para as dimensões 
     int getRows() const;
     int getCols() const;
 
     // Acesso somente leitura à lista de barramentos
-    //(usada para exibição e captura de instantâneos)
     const std::vector<Bus>& getBuses() const;
 
-
-    // FIX: Substitui const_cast em gamecontroller.cpp
-
-
     std::vector<Bus>& getBusesMutable();
-
 
     // Mutating operations — replaces the const_cast anti-pattern
     void addBus(const Bus& bus);
 
 
-    // ignoreBusIndex avoids a bus registering a collision with itself
+    // Evita que os autocarros tenham uma colisão consigo mesmo
     int  getBusLength(int capacity) const;
-    bool isOccupied(int r, int c, int ignoreBusIndex = -1) const;
+
+    // Declaração do método de ocupação
+    bool isOccupied(int r, int c, int ignoreBusIndex = -1) const; 
 
 
     // Funções de controlo das plataformas/slots de estacionamento
@@ -37,7 +34,7 @@ public:
     void occupySlot(int index);
     void clearSlots();
     int  getNumSlots() const;
-    void setNumSlots(int count); // CORREÇÃO OBRIGATÓRIA: Define o tamanho dinâmico das plataformas
+    void setNumSlots(int count);  // Define o tamanho dinâmico das plataformas
 
 private:
     int m_rows;
