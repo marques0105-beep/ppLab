@@ -2,13 +2,16 @@
 #define GAMECONTROLLER_H
 
 #include <QObject>
-#include <QString>
+#include <QTimer>
 #include <QVariantList>
+#include <QStringList>
 #include "board.h"
+#include "passenger.h"
 
 class GameController : public QObject
 {
     Q_OBJECT
+
 
     // PROPRIEDADES QML BÁSICAS 
     Q_PROPERTY(int moveCount READ moveCount NOTIFY moveCountChanged)
@@ -24,6 +27,8 @@ class GameController : public QObject
     Q_PROPERTY(QVariantList parkedBuses READ getParkedBusesForDisplay NOTIFY dataChanged)
     Q_PROPERTY(int numSlots READ numSlots NOTIFY dataChanged)
 
+    Q_PROPERTY(QVariantList passengerQueue READ passengerQueue NOTIFY passengerQueueChanged)
+
 public:
     explicit GameController(QObject *parent = nullptr);
     virtual ~GameController();
@@ -35,8 +40,9 @@ public:
     int rows() const;
     int cols() const;
     int moveCount() const;
-    
-    // Métodos de controlo de fluxo iniciais
+    QVariantList passengerQueue() const;
+
+    // Métodos de controlo de fluxo 
     Q_INVOKABLE void setInMenu(bool inMenu);
     Q_INVOKABLE void goToMenu();
     Q_INVOKABLE void setupTestLevel();
@@ -57,16 +63,22 @@ private:
         int slotIndex;
     };
 
+    void processPassengerBoarding();
+
+    Board m_board;
     std::vector<ParkedBusInfo> m_parkedBuses;
+    QList<Passenger> m_passengerQueue;
+
+    int m_initialPassengersCount;
+
+    QList<Passenger> m_passengerQueue;
 
     bool m_inMenu;
     QString m_gameState;
     int m_currentLevel; // "PLAYING", "WON", "LOST"
-
-    int m_rows;
-    int m_cols;
+    int m_initialPassengersCount;
     int m_moveCount;
-    Board* m_board; // Ponteiro para o tabuleiro que criámos no Passo 2
+    
 };
 
 #endif // GAMECONTROLLER_H

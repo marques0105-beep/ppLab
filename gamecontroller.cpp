@@ -14,18 +14,20 @@ GameController::GameController(QObject *parent)
       m_elapsedSeconds(0)
 {
 
+     connect(&m_timer, &QTimer::timeout, this, [this]() {
+        m_elapsedSeconds++;
+        emit elapsedSecondsChanged();
+    });
+
     // Adicionar um autocarro de exemplo para teste de visualização
     m_board.addBus(Bus("red", 4, Direction::Right, 2, 2));
 }
 
 GameController::~GameController()
-{
+{ m_timer.stop();
     delete m_board;
 }
-
-QVariantList GameController::getBusesForDisplay() const {
-    QVariantList list;
-    
+   
     const auto& buses = m_board.getBuses();
     
     // Mapeia cada objeto Bus do C++ para um QVariantMap aceitável pelo QML
@@ -46,7 +48,7 @@ QVariantList GameController::getBusesForDisplay() const {
         list.append(map);
     }
     return list;
-}
+
 
 QVariantList GameController::getParkedBusesForDisplay() const { return {}; }
 
@@ -81,15 +83,44 @@ void GameController::goToMenu()
     emit gameStateChanged();
 }
 
-void GameController::setupTestLevel()
-{
-    qDebug() << "A inicializar estrutura básica do nível de teste...";
-    
-    m_gameState = "PLAYING";
-    emit gameStateChanged();
-    
-    setInMenu(false);
-    emit showNotification("Nível Inicial Carregado!");
+QVariantList GameController::getPassengerQueueForDisplay() const {
+    QVariantList list;
+    for (const auto& passenger : m_passengerQueue) {
+        list.append(passenger.toVariantMap());
+    }
+    return list;
+}
+
+QVariantList GameController::getBusesForDisplay() const {
+    QVariantList list;
+    const auto& buses = m_board.getBuses();
+    for (const auto& bus : buses) {
+        QVariantMap map;
+        map["color"] = bus.getColor();
+        map["capacity"] = bus.getCapacity();
+        QString dStr = "r";
+        if      (bus.getDirection() == Direction::Left)  dStr = "l";
+        else if (bus.getDirection() == Direction::Up)    dStr = "u";
+        else if (bus.getDirection() == Direction::Down)  dStr = "d";
+        map["direction"] = dStr;
+        map["row"] = bus.getRow();
+        map["col"] = bus.getCol();
+        list.append(map);
+    }
+    return list;
+}
+
+QVariantList GameController::getParkedBusesForDisplay() const {
+    QVariantList list;
+    for (const auto& parked : m_parkedBuses) {
+        QVariantMap map;
+        map["color"] = parked.bus.getColor();
+        map["capacity"] = parked.bus.getCapacity();
+        map["currentPassengers"] = parked.bus.getCurrentPassengers();
+        map["slotIndex"] = parked.slotIndex;
+        list.append(map);
+    }
+    return list;
 }
 
 // MÉTODO DE INTERAÇÃO 
@@ -138,9 +169,19 @@ void GameController::handleBusClick(int busIndex) {
     }
 
     if (exitedBoard) {
-        // Vai estacionar – isso será implementado no Passo 7
-        emit showNotification("🚌 Saiu do tabuleiro! (estacionamento em breve)");
-        // Por agora, não estaciona, só avisa.
+        if (m_board.hasFreeSlot()) {
+            int freeSlot = m_board.getNextFreeSlotIndex();
+            m_board.occupySlot(freeSlot);
+            m_parkedBuses.push_back({bus, freeSlot});
+            bus.setPosition(-10, -10);
+            m_moveCount++;
+            emit moveCountChanged();
+            emit dataChanged();
+            emit showNotification("🚌 Autocarro estacionado na plataforma " + QString::number(freeSlot+1));
+            processPassengerBoarding();
+        } else {
+            emit showNotification("⚠️ Sem plataformas livres!");
+        }
         return;
     }
 
@@ -152,52 +193,50 @@ void GameController::handleBusClick(int busIndex) {
     }
 }
 
-void GameController::handleBusClick(int busIndex) {
-    if (m_gameState != "PLAYING") return;
+void GameController::processPassengerBoarding() {
+    bool progressMade = true;
+    while (progressMade && !m_passengerQueue.isEmpty() && !m_parkedBuses.empty()) 
+    {
+        progressMade = false;
 
-    auto& buses = m_board.getBusesMutable();
-    if (busIndex < 0 || busIndex >= static_cast<int>(buses.size())) return;
+        QString nextPassengerColor = m_passengerQueue.first().color;
 
-    Bus& bus = buses[busIndex];
-    if (bus.getRow() == -10 || bus.getCol() == -10) return; // já estacionado
-
-    int row = bus.getRow();
-    int col = bus.getCol();
-    Direction dir = bus.getDirection();
-
-    // Calcula nova posição (apenas uma célula por agora)
-    int newRow = row;
-    int newCol = col;
-    switch (dir) {
-    case Direction::Right: newCol++; break;
-    case Direction::Left: newCol--; break;
-    case Direction::Down: newRow++; break;
-    case Direction::Up: newRow--; break;
+        for (auto& parked : m_parkedBuses) {
+            if (parked.bus.getColor() == nextPassengerColor && !parked.bus.isFull()) 
+            {
+                parked.bus.addPassenger();
+                m_passengerQueue.removeFirst();
+                progressMade = true;
+                break;
+            }
+        }
     }
 
-    // Verifica limites do tabuleiro (ainda não sai, apenas não move se for para fora)
-    if (newRow < 0 || newRow >= m_board.getRows() ||
-        newCol < 0 || newCol >= m_board.getCols()) {
-        emit showNotification("⚠️ Atingiu o limite! (futuro estacionamento)");
-        return;
+      // Remover autocarros cheios
+    for (auto it = m_parkedBuses.begin(); it != m_parkedBuses.end(); ) {
+        if (it->bus.isFull()) {
+            it = m_parkedBuses.erase(it);
+        } else {
+            ++it;
+        }
     }
 
-    // Move o autocarro
-    bus.setPosition(newRow, newCol);
-    m_moveCount++;
-    emit moveCountChanged();
+    // Atualizar ocupação dos slots
+    m_board.clearSlots();
+    for (const auto& parked : m_parkedBuses) {
+        m_board.occupySlot(parked.slotIndex);
+    }
+
+    updateAnalytics();
     emit dataChanged();
+    checkGameStatus();
 }
 
 
 void GameController::loadLevelAsync(int) {}
 
-void GameController::setupTestLevel()
-{
-    m_moveCount = 0;
-    emit moveCountChanged();
-    setInMenu(false);
-    emit showNotification("Nível de Teste Preparado!");
+void GameController::setupTestLevel() {
+    loadLevelAsync(m_currentLevel);
 }
 
 void GameController::goToMenu()
