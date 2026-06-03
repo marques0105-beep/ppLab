@@ -1,0 +1,20 @@
+{
+  "levels": [
+    {
+      "levelId": 1,
+      "slotsCount": 6,
+      "passengers": [
+        "red","red","red","red",
+        "blue","blue","blue","blue","blue","blue",
+        "green","green","green","green","green","green","green","green",
+        "yellow","yellow","yellow","yellow"
+      ],
+      "buses": [
+        { "color": "red",    "capacity": 4,  "direction": "r", "row": 2, "col": 0 },
+        { "color": "blue",   "capacity": 6,  "direction": "d", "row": 0, "col": 3 },
+        { "color": "green",  "capacity": 8,  "direction": "l", "row": 5, "col": 4 },
+        { "color": "yellow", "capacity": 4,  "direction": "u", "row": 5, "col": 1 }
+      ]
+    }
+  ]
+}
