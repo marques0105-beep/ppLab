@@ -9,6 +9,7 @@ Window {
     title: "Park Out"
     color: "#2c3e50"
 
+    // Constante fictícia para dimensionamento das células
     property real boardSize: Math.min(width, 520) - 16
 
     Connections {
@@ -28,9 +29,12 @@ Window {
 
     Column {
         id: gameColumn
-        anchors.centerIn: parent
-        width: root.boardSize
+        width: parent.width
         spacing: 12
+        topPadding: 8
+        bottomPadding: 16
+        visible: !gameCtrl.inMenu
+        anchors.horizontalCenter: parent.horizontalCenter
 
         // Notificação
         Rectangle {
@@ -42,27 +46,25 @@ Window {
             opacity: 0.0
             anchors.horizontalCenter: parent.horizontalCenter
             Behavior on opacity { NumberAnimation { duration: 250 } }
-            Text {
-                id: notificationText
-                anchors.centerIn: parent
-                text: ""
-                color: "white"
-                font.bold: true
-            }
+            Text { id: notificationText; anchors.centerIn: parent; text: ""; color: "white"; font.bold: true }
         }
 
-        // Contador de movimentos
-        Rectangle {
-            width: root.boardSize
-            height: 40
-            color: "#16a085"
-            radius: 8
-            Text {
-                anchors.centerIn: parent
-                text: "Movimentos: " + gameCtrl.moveCount
-                color: "white"
-                font.bold: true
-                font.pixelSize: 16
+        // Estatísticas (inclui score e dangerLevel)
+        Row {
+            spacing: 8
+            anchors.horizontalCenter: parent.horizontalCenter
+
+            Rectangle {
+                width: 110; height: 38; color: "#16a085"; radius: 8
+                Text { anchors.centerIn: parent; text: "Jogadas: " + gameCtrl.moveCount; color: "white"; font.bold: true; font.pixelSize: 13 }
+            }
+            Rectangle {
+                width: 110; height: 38; color: "#3498db"; radius: 8
+                Text { anchors.centerIn: parent; text: "Pontos: " + gameCtrl.score; color: "white"; font.bold: true; font.pixelSize: 13 }
+            }
+            Rectangle {
+                width: 110; height: 38; color: "#34495e"; radius: 8; border.color: "#bdc3c7"
+                Text { anchors.centerIn: parent; text: gameCtrl.dangerLevel; color: "white"; font.bold: true; font.pixelSize: 12 }
             }
         }
 
@@ -74,9 +76,7 @@ Window {
 
             Text {
                 text: "Próximos Passageiros:"
-                color: "white"
-                font.pointSize: 14
-                font.bold: true
+                color: "white"; font.pointSize: 14; font.bold: true
                 anchors.horizontalCenter: parent.horizontalCenter
             }
 
@@ -100,7 +100,7 @@ Window {
                             border.width: index === 0 ? 3 : 1
                             Text {
                                 anchors.centerIn: parent
-                                text: index === 0 ? "🏃" : (index + 1)
+                                text: index === 0 ? "🏃" : index + 1
                                 font.pixelSize: index === 0 ? 16 : 11
                                 color: "white"
                             }
@@ -110,7 +110,7 @@ Window {
             }
         }
 
-        // Plataformas
+        // Plataformas de estacionamento
         Item {
             width: root.boardSize
             height: 80
@@ -120,7 +120,6 @@ Window {
                 id: slotsRow
                 spacing: 6
                 anchors.fill: parent
-
                 Repeater {
                     model: gameCtrl.numSlots
                     Rectangle {
@@ -131,12 +130,9 @@ Window {
                         border.width: 2
                         radius: 8
                         Text {
-                            anchors.bottom: parent.bottom
-                            anchors.bottomMargin: 4
+                            anchors.bottom: parent.bottom; anchors.bottomMargin: 4
                             anchors.horizontalCenter: parent.horizontalCenter
-                            text: "S-" + (index + 1)
-                            color: "#95a5a6"
-                            font.pixelSize: 10
+                            text: "S-" + (index + 1); color: "#95a5a6"; font.pixelSize: 10
                         }
                     }
                 }
@@ -146,20 +142,14 @@ Window {
                 model: gameCtrl.parkedBuses
                 Rectangle {
                     property real slotW: (root.boardSize - (6 * (gameCtrl.numSlots - 1))) / gameCtrl.numSlots
-                    width: slotW
-                    height: 70
-                    radius: 6
-                    border.color: "#1a1a1a"
-                    border.width: 2
+                    width: slotW; height: 70
+                    radius: 6; border.color: "#1a1a1a"; border.width: 2
                     color: modelData.color
-                    x: modelData.slotIndex * (slotW + 6)
-                    y: 0
+                    x: modelData.slotIndex * (slotW + 6); y: 0
                     Text {
                         anchors.centerIn: parent
                         text: modelData.currentPassengers + "/" + modelData.capacity
-                        color: "white"
-                        font.bold: true
-                        font.pixelSize: 11
+                        color: "white"; font.bold: true; font.pixelSize: 11
                     }
                 }
             }
@@ -167,26 +157,19 @@ Window {
 
         // Tabuleiro
         Rectangle {
-            width: root.boardSize
-            height: root.boardSize
-            color: "#34495e"
-            border.color: "#ecf0f1"
-            border.width: 2
-            clip: true
-            radius: 8
+            width: root.boardSize; height: root.boardSize
+            color: "#34495e"; border.color: "#ecf0f1"; border.width: 2
+            clip: true; radius: 8
+            anchors.horizontalCenter: parent.horizontalCenter
 
             Grid {
-                anchors.fill: parent
-                rows: gameCtrl.rows
-                columns: gameCtrl.cols
+                anchors.fill: parent; rows: gameCtrl.rows; columns: gameCtrl.cols
                 Repeater {
                     model: gameCtrl.rows * gameCtrl.cols
                     Rectangle {
                         width: root.boardSize / gameCtrl.cols
                         height: root.boardSize / gameCtrl.rows
-                        color: "transparent"
-                        border.color: "#2c3e50"
-                        border.width: 1
+                        color: "transparent"; border.color: "#2c3e50"; border.width: 1
                     }
                 }
             }
@@ -198,24 +181,21 @@ Window {
                     property bool isHoriz: modelData.direction === "l" || modelData.direction === "r"
                     property int busLen: modelData.capacity / 2
 
+                    visible: modelData.row !== -10
                     x: modelData.col * cellSize + 2
                     y: modelData.row * cellSize + 2
                     width:  (isHoriz ? busLen * cellSize : cellSize) - 4
                     height: (!isHoriz ? busLen * cellSize : cellSize) - 4
-                    color: modelData.color
-                    radius: 8
-                    border.color: "#1a1a1a"
-                    border.width: 2
+                    color: modelData.color; radius: 8
+                    border.color: "#1a1a1a"; border.width: 2
 
-                    Behavior on x { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
-                    Behavior on y { NumberAnimation { duration: 150; easing.type: Easing.OutQuad } }
+                    Behavior on x { NumberAnimation { duration: 200; easing.type: Easing.OutQuad } }
+                    Behavior on y { NumberAnimation { duration: 200; easing.type: Easing.OutQuad } }
 
                     Text {
                         anchors.centerIn: parent
                         text: "0/" + modelData.capacity
-                        color: "white"
-                        font.bold: true
-                        font.pixelSize: 12
+                        color: "white"; font.bold: true; font.pixelSize: 12
                     }
 
                     MouseArea {
@@ -223,11 +203,7 @@ Window {
                         property int startX: 0
                         property int startY: 0
                         property int threshold: 15
-
-                        onPressed: (mouse) => {
-                            startX = mouse.x
-                            startY = mouse.y
-                        }
+                        onPressed: (mouse) => { startX = mouse.x; startY = mouse.y }
                         onReleased: (mouse) => {
                             let diffX = mouse.x - startX
                             let diffY = mouse.y - startY
@@ -244,5 +220,14 @@ Window {
                 }
             }
         }
+    }
+
+    // Menu simples (opcional, para teste)
+    Column {
+        visible: gameCtrl.inMenu
+        anchors.centerIn: parent
+        spacing: 20
+        Text { text: "PARK OUT"; font.pixelSize: 40; color: "#1abc9c"; anchors.horizontalCenter: parent.horizontalCenter }
+        Button { text: "Iniciar (Teste)"; onClicked: gameCtrl.setupTestLevel() }
     }
 }

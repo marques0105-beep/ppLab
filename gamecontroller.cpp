@@ -1,4 +1,5 @@
 #include "gamecontroller.h"
+#include "gameanalytics.h"
 #include <QDebug>
 
 GameController::GameController(QObject *parent)
@@ -13,75 +14,15 @@ GameController::GameController(QObject *parent)
       m_initialPassengersCount(0),
       m_elapsedSeconds(0)
 {
-
-     connect(&m_timer, &QTimer::timeout, this, [this]() {
+    connect(&m_timer, &QTimer::timeout, this, [this]() {
         m_elapsedSeconds++;
         emit elapsedSecondsChanged();
     });
 
-    // Adicionar um autocarro de exemplo para teste de visualização
-    m_board.addBus(Bus("red", 4, Direction::Right, 2, 2));
-}
-
-GameController::~GameController()
-{ m_timer.stop();
-    delete m_board;
+GameController::~GameController() {
+    m_timer.stop();
 }
    
-    const auto& buses = m_board.getBuses();
-    
-    // Mapeia cada objeto Bus do C++ para um QVariantMap aceitável pelo QML
-    for (const auto& bus : buses) {
-        QVariantMap map;
-        map["color"]    = bus.getColor();
-        map["capacity"] = bus.getCapacity();
-        QString dStr = "r";
-
-        if (bus.getDirection() == Direction::Left) dStr = "l";
-        else if (bus.getDirection() == Direction::Up) dStr = "u";
-        else if (bus.getDirection() == Direction::Down) dStr = "d";
-
-        map["direction"] = dStr;
-        map["row"] = bus.getRow();
-        map["col"] = bus.getCol();
-
-        list.append(map);
-    }
-    return list;
-
-
-QVariantList GameController::getParkedBusesForDisplay() const { return {}; }
-
-
-// GETTERS 
-bool GameController::inMenu() const { return m_inMenu; }
-
-QString GameController::gameState() const { return m_gameState; }
-
-int GameController::currentLevel() const { return m_currentLevel; }
-
-int GameController::rows() const { return m_rows; }
-
-int GameController::cols() const { return m_cols; }
-
-int GameController::moveCount() const { return m_moveCount; }
-
-// MÉTODOS DE CONTROLO DE NAVEGAÇÃO 
-void GameController::setInMenu(bool inMenu)
-{
-    if (m_inMenu != inMenu) {
-        m_inMenu = inMenu;
-        emit inMenuChanged();
-        qDebug() << "Estado do Menu alterado para:" << m_inMenu;
-    }
-}
-
-void GameController::goToMenu()
-{
-    setInMenu(true);
-    m_gameState = "PLAYING";
-    emit gameStateChanged();
-}
 
 QVariantList GameController::getPassengerQueueForDisplay() const {
     QVariantList list;
@@ -230,6 +171,18 @@ void GameController::processPassengerBoarding() {
     updateAnalytics();
     emit dataChanged();
     checkGameStatus();
+}
+
+void GameController::updateAnalytics() {
+    int freeSlotsCount = m_board.getNumSlots() - static_cast<int>(m_parkedBuses.size());
+    int activeBusesCount = 0;
+    for (const auto& b : m_board.getBuses()) {
+        if (b.getRow() != -10) activeBusesCount++;
+    }
+    m_score = GameAnalytics::calculateScore(m_moveCount, m_initialPassengersCount, m_passengerQueue.size());
+    m_dangerLevel = GameAnalytics::evaluateBoardDanger(activeBusesCount, freeSlotsCount, m_passengerQueue.size());
+    emit scoreChanged();
+    emit dangerLevelChanged();
 }
 
 

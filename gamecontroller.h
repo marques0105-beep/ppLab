@@ -2,6 +2,7 @@
 #define GAMECONTROLLER_H
 
 #include <QObject>
+#include <QString>
 #include <QTimer>
 #include <QVariantList>
 #include <QStringList>
@@ -12,13 +13,12 @@ class GameController : public QObject
 {
     Q_OBJECT
 
-
     // PROPRIEDADES QML BÁSICAS 
     Q_PROPERTY(int moveCount READ moveCount NOTIFY moveCountChanged)
     Q_PROPERTY(bool inMenu READ inMenu NOTIFY inMenuChanged)
     Q_PROPERTY(QString gameState READ gameState NOTIFY gameStateChanged)
     Q_PROPERTY(int currentLevel READ currentLevel NOTIFY gameStateChanged)
-
+    
     // Dimensionamento do tabuleiro acoplado à classe Board
     Q_PROPERTY(int rows READ rows CONSTANT)
     Q_PROPERTY(int cols READ cols CONSTANT)
@@ -28,6 +28,8 @@ class GameController : public QObject
     Q_PROPERTY(int numSlots READ numSlots NOTIFY dataChanged)
 
     Q_PROPERTY(QVariantList passengerQueue READ passengerQueue NOTIFY passengerQueueChanged)
+    Q_PROPERTY(int score READ score NOTIFY scoreChanged)
+    Q_PROPERTY(QString dangerLevel READ dangerLevel NOTIFY dangerLevelChanged)
 
 public:
     explicit GameController(QObject *parent = nullptr);
@@ -41,12 +43,15 @@ public:
     int cols() const;
     int moveCount() const;
     QVariantList passengerQueue() const;
+    int score() const { return m_score; }
+    QString dangerLevel() const { return m_dangerLevel; }
 
     // Métodos de controlo de fluxo 
     Q_INVOKABLE void setInMenu(bool inMenu);
     Q_INVOKABLE void goToMenu();
     Q_INVOKABLE void setupTestLevel();
     Q_INVOKABLE void handleBusClick(int busIndex); 
+    void processPassengerBoarding();
 
 signals:
     void inMenuChanged();
@@ -63,6 +68,8 @@ private:
         int slotIndex;
     };
 
+    void updateAnalytics();
+
     void processPassengerBoarding();
 
     Board m_board;
@@ -75,10 +82,17 @@ private:
 
     bool m_inMenu;
     QString m_gameState;
-    int m_currentLevel; // "PLAYING", "WON", "LOST"
-    int m_initialPassengersCount;
+    int m_currentLevel;
+    int m_rows;
+    int m_cols;
     int m_moveCount;
-    
+    Board* m_board;
+    std::vector<Passenger> m_passengerQueue;
+
+    // Variáveis de estado do Passo 9
+    int m_score;
+    int m_passengersBoardedCount;
+    QString m_dangerLevel;
 };
 
 #endif // GAMECONTROLLER_H
