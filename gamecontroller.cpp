@@ -1,5 +1,9 @@
 #include "gamecontroller.h"
 #include "gameanalytics.h"
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 #include <QDebug>
 
 GameController::GameController(QObject *parent)
@@ -187,6 +191,88 @@ void GameController::updateAnalytics() {
     m_dangerLevel = GameAnalytics::evaluateBoardDanger(activeBusesCount, freeSlotsCount, m_passengerQueue.size());
     emit scoreChanged();
     emit dangerLevelChanged();
+}
+
+GameController::LevelData GameController::readLevelFromJson(int levelNumber) {
+    LevelData result;
+    QFile file(":/levels.json");
+    if (!file.open(QIODevice::ReadOnly)) {
+        file.setFileName("levels.json");
+        if (!file.open(QIODevice::ReadOnly)) {
+            qWarning() << "Não foi possível abrir levels.json";
+            return result;
+        }
+    }
+    QByteArray data = file.readAll();
+    file.close();
+    QJsonDocument doc = QJsonDocument::fromJson(data);
+    if (doc.isNull() || !doc.isObject()) return result;
+    QJsonObject rootObj = doc.object();
+    QJsonArray levelsArray = rootObj["levels"].toArray();
+    QJsonObject levelObj;
+    bool levelFound = false;
+    for (int i = 0; i < levelsArray.size(); ++i) {
+        QJsonObject currentLvl = levelsArray[i].toObject();
+        if (currentLvl["levelId"].toInt() == levelNumber) {
+            levelObj = currentLvl;
+            levelFound = true;
+            break;
+        }
+    }
+    if (!levelFound) return result;
+
+    if (levelObj.contains("slotsCount"))
+        result.slotsCount = levelObj["slotsCount"].toInt();
+
+    for (const auto& val : levelObj["passengers"].toArray())
+        result.passengers.append(Passenger(val.toString()));
+
+    for (const auto& val : levelObj["buses"].toArray()) {
+        QJsonObject bObj = val.toObject();
+        QString dirStr = bObj["direction"].toString();
+        Direction dir = Direction::Right;
+        if (dirStr == "l") dir = Direction::Left;
+        else if (dirStr == "u") dir = Direction::Up;
+        else if (dirStr == "d") dir = Direction::Down;
+        result.buses.push_back(Bus(bObj["color"].toString(), bObj["capacity"].toInt(),
+                                   dir, bObj["row"].toInt(), bObj["col"].toInt()));
+    }
+    result.success = true;
+    return result;
+}
+
+void GameController::applyLevel(const LevelData& data, int levelNumber) {
+    if (!data.success) {
+        emit showNotification("❌ Erro ao carregar nível!");
+        return;
+    }
+    m_timer.stop();
+    m_elapsedSeconds = 0;
+    emit elapsedSecondsChanged();
+
+    m_board = Board(8, 8);
+    m_board.setNumSlots(data.slotsCount);
+    m_parkedBuses.clear();
+    m_board.clearSlots();
+    for (const auto& bus : data.buses) m_board.addBus(bus);
+    m_passengerQueue = data.passengers;
+    m_initialPassengersCount = data.passengers.size();
+    m_currentLevel = levelNumber;
+    m_moveCount = 0;
+    m_score = 1000;
+    m_dangerLevel = "ESTÁVEL 🟢";
+    m_gameState = "PLAYING";
+    m_inMenu = false;
+    m_timer.start(1000);
+
+    emit moveCountChanged();
+    emit scoreChanged();
+    emit dangerLevelChanged();
+    emit inMenuChanged();
+    emit dataChanged();
+    emit gameStateChanged();
+
+    processPassengerBoarding();   // tenta embarques iniciais
 }
 
 // Verificar condições de vitória ou derrota
