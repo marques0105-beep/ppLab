@@ -6,7 +6,7 @@ Window {
     width: 480
     height: 900
     visible: true
-    title: "Park Out"
+    title: "Park Out "
     color: "#2c3e50"
 
     // Board size adapts to actual window width so it fits any phone screen
@@ -35,7 +35,9 @@ Window {
         id: menuScreen
         anchors.centerIn: parent
         spacing: 24
-        visible: gameCtrl.inMenu
+        opacity: gameCtrl.inMenu ? 1 : 0
+        visible: opacity > 0
+        Behavior on opacity { NumberAnimation { duration: 300 } }
 
         Text {
             text: "PARK OUT"
@@ -70,20 +72,20 @@ Window {
 
                     Text {
                         text: "Nível " + modelData
-                        color: "white";
-                        font.bold: true;
+                        color: "white"; 
+                        font.bold: true; 
                         font.pixelSize: 18
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
                     Text {
                         text: "Recorde: " + gameCtrl.getLevelHighScore(modelData) + " pts"
-                        color: "#bdc3c7";
+                        color: "#bdc3c7"; 
                         font.pixelSize: 12
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
                     Text {
                         text: "Tempo: " + gameCtrl.getLevelBestTime(modelData) + " s"
-                        color: "#bdc3c7";
+                        color: "#bdc3c7"; 
                         font.pixelSize: 12
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
@@ -105,11 +107,13 @@ Window {
 
     // ==========================================
     //                  JOGO
-    // ==========================================
+    // =========================================
     Flickable {
         id: gameFlickable
         anchors.fill: parent
-        visible: !gameCtrl.inMenu
+        opacity: gameCtrl.inMenu ? 0 : 1
+        visible: opacity > 0
+        Behavior on opacity { NumberAnimation { duration: 300 } }
         contentWidth: width
         contentHeight: gameColumn.implicitHeight + 24
         clip: true
@@ -219,6 +223,8 @@ Window {
                                 color: modelData.color
                                 border.color: index === 0 ? "#f1c40f" : "white"
                                 border.width: index === 0 ? 3 : 1
+                                scale: index === 0 ? 1.15 : 1.0
+                                Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.InOutQuad } }
                                 Text {
                                     anchors.centerIn: parent
                                     text: index === 0 ? "🏃" : index + 1
@@ -231,7 +237,7 @@ Window {
                 }
             }
 
-            // Plataformas (slots)
+            // ── Platform slots ──
             Item {
                 width: root.boardSize
                 height: 90
@@ -273,14 +279,14 @@ Window {
                 }
             }
 
-            // Tabuleiro de jogo
+            // ── Game board ──
             Rectangle {
-                width: root.boardSize;
+                width: root.boardSize; 
                 height: root.boardSize
                 color: "#34495e";
-                border.color: "#ecf0f1";
+                border.color: "#ecf0f1"; 
                 border.width: 2
-                clip: true;
+                clip: true; 
                 radius: 8
                 anchors.horizontalCenter: parent.horizontalCenter
 
@@ -320,9 +326,7 @@ Window {
                         Text {
                             anchors.centerIn: parent
                             text: "0/" + modelData.capacity
-                            color: "white";
-                            font.bold: true;
-                            font.pixelSize: 12
+                            color: "white"; font.bold: true; font.pixelSize: 12
                         }
 
                         Rectangle {
@@ -358,7 +362,7 @@ Window {
                                 let diffX = mouse.x - startX
                                 let diffY = mouse.y - startY
                                 if (Math.abs(diffX) > threshold || Math.abs(diffY) > threshold) {
-                                    if (modelData.direction === "r" && diffX >  threshold) gameCtrl.handleBusClick(index)
+                                    if      (modelData.direction === "r" && diffX >  threshold) gameCtrl.handleBusClick(index)
                                     else if (modelData.direction === "l" && diffX < -threshold) gameCtrl.handleBusClick(index)
                                     else if (modelData.direction === "d" && diffY >  threshold) gameCtrl.handleBusClick(index)
                                     else if (modelData.direction === "u" && diffY < -threshold) gameCtrl.handleBusClick(index)
@@ -373,8 +377,13 @@ Window {
                 // Overlay de vitória/derrota
                 Rectangle {
                     anchors.fill: parent
-                    color: gameCtrl.gameState === "WON" ? "#e027ae60" : "#e0c0392b"
-                    visible: gameCtrl.gameState !== "PLAYING"
+                    color: gameCtrl.gameState === "WON" ? "#8027ae60" : "#80c0392b"
+                    opacity: gameCtrl.gameState !== "PLAYING" ? 1.0 : 0.0
+                    visible: opacity > 0
+                    Behavior on opacity { NumberAnimation { duration: 250 } }
+                    scale: gameCtrl.gameState !== "PLAYING" ? 1.0 : 0.8
+                    Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
+
                     Column {
                         anchors.centerIn: parent; spacing: 20
                         Text {
