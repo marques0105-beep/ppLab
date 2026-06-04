@@ -11,15 +11,15 @@
 // Construtor e destrutor
 GameController::GameController(QObject *parent)
     : QObject(parent),
-      m_board(8, 8),
-      m_moveCount(0),
-      m_currentLevel(1),
-      m_gameState("PLAYING"),
-      m_score(0),
-      m_dangerLevel("ESTÁVEL 🟢"),
-      m_inMenu(true),
-      m_initialPassengersCount(0),
-      m_elapsedSeconds(0)
+    m_board(8, 8),
+    m_moveCount(0),
+    m_currentLevel(1),
+    m_gameState("PLAYING"),
+    m_score(1000),
+    m_dangerLevel("ESTÁVEL 🟢"),
+    m_inMenu(true),
+    m_initialPassengersCount(0),
+    m_elapsedSeconds(0)
 {
     connect(&m_timer, &QTimer::timeout, this, [this]() {
         m_elapsedSeconds++;
@@ -191,6 +191,7 @@ void GameController::updateAnalytics() {
     for (const auto& b : m_board.getBuses()) {
         if (b.getRow() != -10) activeBusesCount++;
     }
+
     m_score = GameAnalytics::calculateScore(m_moveCount, m_initialPassengersCount, m_passengerQueue.size());
     m_dangerLevel = GameAnalytics::evaluateBoardDanger(activeBusesCount, freeSlotsCount, m_passengerQueue.size());
     emit scoreChanged();
@@ -212,6 +213,7 @@ void GameController::loadLevelAsync(int levelNumber) {
 
 GameController::LevelData GameController::readLevelFromJsonWorker(int levelNumber) {
     LevelData result;
+
     QFile file(":/levels.json");
     if (!file.open(QIODevice::ReadOnly)) {
         file.setFileName("levels.json");
@@ -282,7 +284,7 @@ void GameController::applyLoadedLevel(LevelData data, int levelNumber) {
     m_currentLevel = levelNumber;
 
     m_moveCount = 0;
-    m_score = 0;
+    m_score = 1000;
     m_dangerLevel = "ESTÁVEL 🟢";
     m_gameState = "PLAYING";
     m_inMenu = false;
@@ -290,16 +292,11 @@ void GameController::applyLoadedLevel(LevelData data, int levelNumber) {
     m_timer.start(1000);
     emit elapsedSecondsChanged();
 
-    emit moveCountChanged(); 
-    emit scoreChanged(); 
-    emit dangerLevelChanged();
-    emit inMenuChanged(); 
-    emit dataChanged(); 
-    emit gameStateChanged();
+    emit moveCountChanged(); emit scoreChanged(); emit dangerLevelChanged();
+    emit inMenuChanged(); emit dataChanged(); emit gameStateChanged();
     processPassengerBoarding();
 }
 
-// Verificar condições de vitória ou derrota
 void GameController::checkGameStatus() {
     if (m_gameState != "PLAYING") return;
 
@@ -316,7 +313,7 @@ void GameController::checkGameStatus() {
         m_gameState = "WON";
         m_timer.stop();
 
-        // GRAVAÇÃO DOS DADOS NO DISCO 
+        // GRAVAÇÃO DOS DADOS
         Persistence::saveScore(m_currentLevel, m_score);
         Persistence::saveBestTime(m_currentLevel, m_elapsedSeconds);
         Persistence::markLevelCompleted(m_currentLevel);

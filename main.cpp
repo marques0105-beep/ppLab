@@ -1,25 +1,30 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QQmlContext>
+#include "gamecontroller.h"
+#include "gametests.h"
+
+// Adiciona isto para permitir o uso do novo sufixo moderno do Qt 6 (_s)
+using namespace Qt::StringLiterals;
 
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
-    QQmlApplicationEngine engine;
-
-    // Criar a instância única do motor do jogo em C++
+    //Crie o controlador antes de carregar o QML para que a propriedade de contexto
+    // nunca seja nula
     GameController gameCtrl;
-
-    // Disponibilizar o objeto C++ para dentro de qualquer ficheiro QML com o nome "gameCtrl"
+    QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("gameCtrl", &gameCtrl);
 
-    // Carrega o ficheiro principal de interface QML
-    const QUrl url(u"qrc:/qt/qml/ParkOut/Main.qml"_s)
+    // Executar testes unitários
+    GameTests::runAllTests();
 
+    // Carrega a UI por último
+    const QUrl url(u"qrc:/qt/qml/ParkOut/Main.qml"_s);
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed,
-        &app, []() { QCoreApplication::exit(-1); },
-        Qt::QueuedConnection);
-        
+                     &app, []() { QCoreApplication::exit(-1); },
+                     Qt::QueuedConnection);
     engine.load(url);
 
     return app.exec();

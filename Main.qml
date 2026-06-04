@@ -9,6 +9,7 @@ Window {
     title: "Park Out"
     color: "#2c3e50"
 
+    // Board size adapts to actual window width so it fits any phone screen
     property real boardSize: Math.min(width, 520) - 16
 
     // Recebe notificações do C++
@@ -27,7 +28,9 @@ Window {
         onTriggered: notificationPopup.opacity = 0.0
     }
 
-    // ========== MENU ==========
+    // ==========================================
+    //                   MENU
+    // ==========================================
     Column {
         id: menuScreen
         anchors.centerIn: parent
@@ -67,20 +70,20 @@ Window {
 
                     Text {
                         text: "Nível " + modelData
-                        color: "white"
-                        font.bold: true
+                        color: "white";
+                        font.bold: true;
                         font.pixelSize: 18
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
                     Text {
                         text: "Recorde: " + gameCtrl.getLevelHighScore(modelData) + " pts"
-                        color: "#bdc3c7"
+                        color: "#bdc3c7";
                         font.pixelSize: 12
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
                     Text {
                         text: "Tempo: " + gameCtrl.getLevelBestTime(modelData) + " s"
-                        color: "#bdc3c7"
+                        color: "#bdc3c7";
                         font.pixelSize: 12
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
@@ -100,7 +103,9 @@ Window {
         }
     }
 
-    // ========== JOGO ==========
+    // ==========================================
+    //                  JOGO
+    // ==========================================
     Flickable {
         id: gameFlickable
         anchors.fill: parent
@@ -121,6 +126,7 @@ Window {
                 spacing: 6
                 anchors.horizontalCenter: parent.horizontalCenter
 
+                // Row 1: navigation buttons
                 Row {
                     spacing: 10
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -135,6 +141,7 @@ Window {
                     }
                 }
 
+                // Row 2: stats
                 Row {
                     spacing: 8
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -173,10 +180,10 @@ Window {
                 anchors.horizontalCenter: parent.horizontalCenter
                 Behavior on opacity { NumberAnimation { duration: 250 } }
                 Text {
-                    id: notificationText
-                    anchors.centerIn: parent
-                    text: ""
-                    color: "white"
+                    id: notificationText;
+                    anchors.centerIn:parent; 
+                    text: "";
+                    color: "white";
                     font.bold: true
                 }
             }
@@ -214,7 +221,7 @@ Window {
                                 border.width: index === 0 ? 3 : 1
                                 Text {
                                     anchors.centerIn: parent
-                                    text: index === 0 ? "🏃" : (index + 1)
+                                    text: index === 0 ? "🏃" : index + 1
                                     font.pixelSize: index === 0 ? 16 : 11
                                     color: "white"
                                 }
@@ -268,9 +275,13 @@ Window {
 
             // Tabuleiro de jogo
             Rectangle {
-                width: root.boardSize; height: root.boardSize
-                color: "#34495e"; border.color: "#ecf0f1"; border.width: 2
-                clip: true; radius: 8
+                width: root.boardSize;
+                height: root.boardSize
+                color: "#34495e";
+                border.color: "#ecf0f1";
+                border.width: 2
+                clip: true;
+                radius: 8
                 anchors.horizontalCenter: parent.horizontalCenter
 
                 Grid {
@@ -309,7 +320,9 @@ Window {
                         Text {
                             anchors.centerIn: parent
                             text: "0/" + modelData.capacity
-                            color: "white"; font.bold: true; font.pixelSize: 12
+                            color: "white";
+                            font.bold: true;
+                            font.pixelSize: 12
                         }
 
                         Rectangle {
@@ -340,12 +353,12 @@ Window {
                             property int startY: 0
                             property int threshold: 15
 
-                            onPressed: (mouse) => { startX = mouse.x; startY = mouse.y }
+                            onPressed:  (mouse) => { startX = mouse.x; startY = mouse.y }
                             onReleased: (mouse) => {
                                 let diffX = mouse.x - startX
                                 let diffY = mouse.y - startY
                                 if (Math.abs(diffX) > threshold || Math.abs(diffY) > threshold) {
-                                    if      (modelData.direction === "r" && diffX >  threshold) gameCtrl.handleBusClick(index)
+                                    if (modelData.direction === "r" && diffX >  threshold) gameCtrl.handleBusClick(index)
                                     else if (modelData.direction === "l" && diffX < -threshold) gameCtrl.handleBusClick(index)
                                     else if (modelData.direction === "d" && diffY >  threshold) gameCtrl.handleBusClick(index)
                                     else if (modelData.direction === "u" && diffY < -threshold) gameCtrl.handleBusClick(index)
@@ -360,7 +373,7 @@ Window {
                 // Overlay de vitória/derrota
                 Rectangle {
                     anchors.fill: parent
-                    color: gameCtrl.gameState === "WON" ? "#8027ae60" : "#80c0392b"
+                    color: gameCtrl.gameState === "WON" ? "#e027ae60" : "#e0c0392b"
                     visible: gameCtrl.gameState !== "PLAYING"
                     Column {
                         anchors.centerIn: parent; spacing: 20
