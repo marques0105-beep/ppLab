@@ -6,12 +6,12 @@ Window {
     width: 480
     height: 900
     visible: true
-    title: "Park Out "
+    title: "Park Out - Projeto Final"
     color: "#2c3e50"
-
-    // Board size adapts to actual window width so it fits any phone screen
+    
+    // Board size adapts to actual window width so it fits any phone screen    
     property real boardSize: Math.min(width, 520) - 16
-
+    
     // Recebe notificações do C++
     Connections {
         target: gameCtrl
@@ -29,15 +29,22 @@ Window {
     }
 
     // ==========================================
-    //                   MENU
+    //                 M E N U
     // ==========================================
     Column {
         id: menuScreen
         anchors.centerIn: parent
         spacing: 24
-        opacity: gameCtrl.inMenu ? 1 : 0
+
+        // Transição suave de fade e deslizamento ao entrar/sair do menu
         visible: opacity > 0
-        Behavior on opacity { NumberAnimation { duration: 300 } }
+        opacity: gameCtrl.inMenu ? 1.0 : 0.0
+        Behavior on opacity { NumberAnimation { duration: 300; easing.type: Easing.InOutQuad } }
+
+        transform: Translate {
+            y: gameCtrl.inMenu ? 0 : -20
+            Behavior on y { NumberAnimation { duration: 300; easing.type: Easing.InOutQuad } }
+        }
 
         Text {
             text: "PARK OUT"
@@ -66,27 +73,27 @@ Window {
                 radius: 10
                 anchors.horizontalCenter: parent.horizontalCenter
 
+                // Hover press effect
+                scale: levelMouseArea.pressed ? 0.96 : 1.0
+                Behavior on scale { NumberAnimation { duration: 100 } }
+
                 Column {
                     anchors.centerIn: parent
                     spacing: 4
 
                     Text {
                         text: "Nível " + modelData
-                        color: "white"; 
-                        font.bold: true; 
-                        font.pixelSize: 18
+                        color: "white"; font.bold: true; font.pixelSize: 18
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
                     Text {
                         text: "Recorde: " + gameCtrl.getLevelHighScore(modelData) + " pts"
-                        color: "#bdc3c7"; 
-                        font.pixelSize: 12
+                        color: "#bdc3c7"; font.pixelSize: 12
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
                     Text {
                         text: "Tempo: " + gameCtrl.getLevelBestTime(modelData) + " s"
-                        color: "#bdc3c7"; 
-                        font.pixelSize: 12
+                        color: "#bdc3c7"; font.pixelSize: 12
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
                     Text {
@@ -98,25 +105,33 @@ Window {
                 }
 
                 MouseArea {
+                    id: levelMouseArea
                     anchors.fill: parent
                     onClicked: gameCtrl.loadLevelAsync(modelData)
                 }
             }
         }
     }
-
+    
     // ==========================================
-    //                  JOGO
+    //                 J O G O
     // =========================================
     Flickable {
         id: gameFlickable
         anchors.fill: parent
-        opacity: gameCtrl.inMenu ? 0 : 1
-        visible: opacity > 0
-        Behavior on opacity { NumberAnimation { duration: 300 } }
         contentWidth: width
         contentHeight: gameColumn.implicitHeight + 24
         clip: true
+
+        // FIX: Smooth fade+slide transition when entering game
+        visible: opacity > 0
+        opacity: gameCtrl.inMenu ? 0.0 : 1.0
+        Behavior on opacity { NumberAnimation { duration: 300; easing.type: Easing.InOutQuad } }
+
+        transform: Translate {
+            y: gameCtrl.inMenu ? 20 : 0
+            Behavior on y { NumberAnimation { duration: 300; easing.type: Easing.InOutQuad } }
+        }
 
         Column {
             id: gameColumn
@@ -125,12 +140,11 @@ Window {
             topPadding: 8
             bottomPadding: 16
 
-            // Barra superior com botões e estatísticas
+            // ── Top bar ──
             Column {
                 spacing: 6
                 anchors.horizontalCenter: parent.horizontalCenter
 
-                // Row 1: navigation buttons
                 Row {
                     spacing: 10
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -145,7 +159,6 @@ Window {
                     }
                 }
 
-                // Row 2: stats
                 Row {
                     spacing: 8
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -176,23 +189,17 @@ Window {
                 }
             }
 
-            // Notificação (popup)
+            // ── Notification bar ──
             Rectangle {
                 id: notificationPopup
                 width: root.boardSize; height: 35
                 color: "#e67e22"; radius: 5; opacity: 0.0
                 anchors.horizontalCenter: parent.horizontalCenter
                 Behavior on opacity { NumberAnimation { duration: 250 } }
-                Text {
-                    id: notificationText;
-                    anchors.centerIn:parent; 
-                    text: "";
-                    color: "white";
-                    font.bold: true
-                }
+                Text { id: notificationText; anchors.centerIn: parent; text: ""; color: "white"; font.bold: true }
             }
 
-            // Fila de passageiros
+            // ── Passenger queue ──
             Column {
                 spacing: 6
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -223,8 +230,19 @@ Window {
                                 color: modelData.color
                                 border.color: index === 0 ? "#f1c40f" : "white"
                                 border.width: index === 0 ? 3 : 1
-                                scale: index === 0 ? 1.15 : 1.0
-                                Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.InOutQuad } }
+
+                                // FIX: pulse animation on the next-up passenger
+                                scale: index === 0 ? pulseAnim.running ? 1.15 : 1.0 : 1.0
+                                Behavior on scale { NumberAnimation { duration: 300; easing.type: Easing.OutBack } }
+
+                                SequentialAnimation on scale {
+                                    id: pulseAnim
+                                    running: index === 0
+                                    loops: Animation.Infinite
+                                    NumberAnimation { to: 1.18; duration: 600; easing.type: Easing.InOutSine }
+                                    NumberAnimation { to: 1.0;  duration: 600; easing.type: Easing.InOutSine }
+                                }
+
                                 Text {
                                     anchors.centerIn: parent
                                     text: index === 0 ? "🏃" : index + 1
@@ -251,6 +269,7 @@ Window {
                     Repeater {
                         model: gameCtrl.numSlots
                         Rectangle {
+                            // FIX: use slotsRow.spacing (not hardcoded 6) to match the Row's actual spacing
                             width: (root.boardSize - (slotsRow.spacing * (gameCtrl.numSlots - 1))) / gameCtrl.numSlots
                             height: parent.height - 10
                             color: "#34495e"; border.color: "#95a5a6"; border.width: 2; radius: 8
@@ -266,10 +285,16 @@ Window {
                 Repeater {
                     model: gameCtrl.parkedBuses
                     Rectangle {
-                        property real slotW: (root.boardSize - (6 * (gameCtrl.numSlots - 1))) / gameCtrl.numSlots
+                        // FIX: slot width now correctly uses slotsRow.spacing
+                        property real slotW: (root.boardSize - (slotsRow.spacing * (gameCtrl.numSlots - 1))) / gameCtrl.numSlots
                         width: slotW; height: 72
                         radius: 6; border.color: "#1a1a1a"; border.width: 2; color: modelData.color
-                        x: modelData.slotIndex * (slotW + 6); y: 0
+
+                        // Animate bus sliding into its slot
+                        x: modelData.slotIndex * (slotW + slotsRow.spacing)
+                        y: 0
+                        Behavior on x { NumberAnimation { duration: 250; easing.type: Easing.OutQuad } }
+
                         Text {
                             anchors.centerIn: parent
                             text: modelData.currentPassengers + "/" + modelData.capacity
@@ -281,13 +306,9 @@ Window {
 
             // ── Game board ──
             Rectangle {
-                width: root.boardSize; 
-                height: root.boardSize
-                color: "#34495e";
-                border.color: "#ecf0f1"; 
-                border.width: 2
-                clip: true; 
-                radius: 8
+                width: root.boardSize; height: root.boardSize
+                color: "#34495e"; border.color: "#ecf0f1"; border.width: 2
+                clip: true; radius: 8
                 anchors.horizontalCenter: parent.horizontalCenter
 
                 Grid {
@@ -309,7 +330,7 @@ Window {
                     Rectangle {
                         property real cellSize: root.boardSize / gameCtrl.cols
                         property bool isHoriz: modelData.direction === "l" || modelData.direction === "r"
-                        property int  busLen: modelData.capacity / 2
+                        property int  busLen:  modelData.capacity / 2
 
                         visible: modelData.row !== -10
 
@@ -374,15 +395,19 @@ Window {
                     }
                 }
 
-                // Overlay de vitória/derrota
+                /// Overlay de vitória/derrota
                 Rectangle {
                     anchors.fill: parent
-                    color: gameCtrl.gameState === "WON" ? "#8027ae60" : "#80c0392b"
+
+                    // FIX: animate overlay appearing with scale + fade
                     opacity: gameCtrl.gameState !== "PLAYING" ? 1.0 : 0.0
+                    scale:   gameCtrl.gameState !== "PLAYING" ? 1.0 : 0.85
                     visible: opacity > 0
-                    Behavior on opacity { NumberAnimation { duration: 250 } }
-                    scale: gameCtrl.gameState !== "PLAYING" ? 1.0 : 0.8
-                    Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
+
+                    Behavior on opacity { NumberAnimation { duration: 300; easing.type: Easing.OutQuad } }
+                    Behavior on scale   { NumberAnimation { duration: 300; easing.type: Easing.OutBack } }
+
+                    color: gameCtrl.gameState === "WON" ? "#e027ae60" : "#e0c0392b"
 
                     Column {
                         anchors.centerIn: parent; spacing: 20
@@ -392,7 +417,9 @@ Window {
                             anchors.horizontalCenter: parent.horizontalCenter
                         }
                         Text {
-                            text: gameCtrl.gameState === "WON" ? "Nível concluído com sucesso!" : "As plataformas ficaram cheias!"
+                            text: gameCtrl.gameState === "WON"
+                                  ? "Nível concluído com sucesso!"
+                                  : "As plataformas ficaram cheias!"
                             color: "white"; font.pixelSize: 16
                             anchors.horizontalCenter: parent.horizontalCenter
                         }
