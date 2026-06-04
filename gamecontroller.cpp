@@ -1,5 +1,6 @@
 #include "gamecontroller.h"
 #include "gameanalytics.h"
+#include "persistence.h"
 #include <QtConcurrent>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -310,10 +311,12 @@ void GameController::checkGameStatus() {
         }
     }
 
+    // VITÓRIA
     if (!anyBusesLeft && m_passengerQueue.isEmpty() && m_parkedBuses.empty()) {
         m_gameState = "WON";
         m_timer.stop();
 
+        // GRAVAÇÃO DOS DADOS NO DISCO 
         Persistence::saveScore(m_currentLevel, m_score);
         Persistence::saveBestTime(m_currentLevel, m_elapsedSeconds);
         Persistence::markLevelCompleted(m_currentLevel);
@@ -321,6 +324,7 @@ void GameController::checkGameStatus() {
         return;
     }
 
+    // DERROTA
     if (!m_board.hasFreeSlot() && !m_passengerQueue.isEmpty()) {
         bool matchFound = false;
         QString nextColor = m_passengerQueue.first().color;
