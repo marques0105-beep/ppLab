@@ -7,6 +7,7 @@
 #include <QVariantList>
 #include <QStringList>
 #include "board.h"
+#include "bus.h"
 #include "passenger.h"
 
 class GameController : public QObject
@@ -46,21 +47,25 @@ public:
     int score() const { return m_score; }
     QString dangerLevel() const { return m_dangerLevel; }
 
+    QVariantList getPassengerQueueForDisplay() const;
+    QVariantList getBusesForDisplay() const;
+    QVariantList getParkedBusesForDisplay() const;
+
     // Métodos de controlo de fluxo 
     Q_INVOKABLE void setInMenu(bool inMenu);
     Q_INVOKABLE void goToMenu();
     Q_INVOKABLE void setupTestLevel();
     Q_INVOKABLE void handleBusClick(int busIndex); 
-    void processPassengerBoarding();
 
 signals:
     void inMenuChanged();
     void gameStateChanged();
     void currentLevelChanged();
     void boardDimensionsChanged();
-    void moveCountChanged();
-    void showNotification(QString message);
-
+    void busesChanged();
+    void passengerQueueChanged();
+    void analyticsChanged();
+    void showNotification(const QString &message);
 
 private:
     struct ParkedBusInfo {
@@ -69,8 +74,9 @@ private:
     };
 
     void updateAnalytics();
-
     void processPassengerBoarding();
+    void checkGameStatus(); 
+
 
     Board m_board;
     std::vector<ParkedBusInfo> m_parkedBuses;
@@ -86,8 +92,9 @@ private:
     int m_rows;
     int m_cols;
     int m_moveCount;
-    Board* m_board;
-    std::vector<Passenger> m_passengerQueue;
+    int m_score;
+    int m_passengersBoardedCount;
+    QString m_dangerLevel;
 
     // Variáveis de estado do Passo 9
     int m_score;

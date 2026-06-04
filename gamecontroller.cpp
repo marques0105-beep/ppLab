@@ -8,7 +8,7 @@ GameController::GameController(QObject *parent)
       m_moveCount(0),
       m_currentLevel(1),
       m_gameState("PLAYING"),
-      m_score(1000),
+      m_score(0),
       m_dangerLevel("ESTÁVEL 🟢"),
       m_inMenu(true),
       m_initialPassengersCount(0),
@@ -18,11 +18,11 @@ GameController::GameController(QObject *parent)
         m_elapsedSeconds++;
         emit elapsedSecondsChanged();
     });
+}
 
 GameController::~GameController() {
     m_timer.stop();
 }
-   
 
 QVariantList GameController::getPassengerQueueForDisplay() const {
     QVariantList list;
@@ -32,17 +32,21 @@ QVariantList GameController::getPassengerQueueForDisplay() const {
     return list;
 }
 
+
+
 QVariantList GameController::getBusesForDisplay() const {
     QVariantList list;
     const auto& buses = m_board.getBuses();
     for (const auto& bus : buses) {
         QVariantMap map;
-        map["color"] = bus.getColor();
+        map["color"]    = bus.getColor();
         map["capacity"] = bus.getCapacity();
+
         QString dStr = "r";
         if      (bus.getDirection() == Direction::Left)  dStr = "l";
         else if (bus.getDirection() == Direction::Up)    dStr = "u";
         else if (bus.getDirection() == Direction::Down)  dStr = "d";
+
         map["direction"] = dStr;
         map["row"] = bus.getRow();
         map["col"] = bus.getCol();
@@ -185,8 +189,50 @@ void GameController::updateAnalytics() {
     emit dangerLevelChanged();
 }
 
+// Verificar condições de vitória ou derrota
+void GameController::checkGameStatus()
+{
+    if (!m_board) return;
 
-void GameController::loadLevelAsync(int) {}
+    // 1. Validar Vitória
+    bool boardEmpty = true;
+    bool parkingEmpty = true;
+
+    const std::vector<Bus>& busesList = m_board->getBuses();
+    for (const Bus &bus : busesList) {
+        if (bus.row() != -10 && bus.row() != -20) boardEmpty = false;
+        if (bus.row() == -10) parkingEmpty = false;
+    }
+
+    if (boardEmpty && parkingEmpty && m_passengerQueue.empty()) {
+        m_gameState = "VICTORY";
+        emit gameStateChanged();
+        return;
+    }
+
+    // 2. Validar Derrota
+    if (!m_board->hasFreeSlot() && !m_passengerQueue.empty()) {
+        QString nextPassengerColor = m_passengerQueue.front().color();
+        bool canBoardAnywhere = false;
+
+        for (const Bus &bus : busesList) {
+            if (bus.row() == -10 && bus.color() == nextPassengerColor && !bus.isFull()) {
+                canBoardAnywhere = true;
+                break;
+            }
+        }
+
+        if (!canBoardAnywhere) {
+            m_gameState = "DEFEAT";
+            emit gameStateChanged();
+        }
+    }
+}
+
+
+void GameController::loadLevelAsync(int levelNumber) {
+    emit showNotification("A carregar Nível...");
+}
 
 void GameController::setupTestLevel() {
     loadLevelAsync(m_currentLevel);
