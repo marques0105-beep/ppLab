@@ -3,6 +3,7 @@ Park Out
 Park Out é um jogo de puzzle/logística desenvolvido em C++ com o Qt 6, com suporte para Desktop e Mobile.
 
 O objetivo é gerir autocarros de diferentes cores e capacidades (4, 6, 8 e 12 passageiros) estacionados num tabuleiro em grelha. Cada autocarro tem uma direção fixa e só pode avançar se o caminho estiver livre. O jogador deve levar os autocarros aos passageiros da mesma cor, respeitando a capacidade e as plataformas de embarque. O jogo termina quando todos os passageiros são transportados e todos os autocarros saem do tabuleiro.
+
 --------------------------------------------------------------------------
 - Funcionalidades principais
 
