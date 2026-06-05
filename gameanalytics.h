@@ -5,6 +5,9 @@
 #include <vector>
 #include <utility>
 
+// Todos os métodos são funções puras (sem efeitos colaterais, sem estado mutável)
+// Atende ao requisito do paradigma de estilo funcional.
+// BoardSnapshot + applyMove satisfaz o requisito de estruturas imutáveis
 class GameAnalytics {
 public:
 
@@ -17,7 +20,8 @@ public:
     };
 
 
-    // Usada pelo GameController para pré-visualizar movimentos.
+    // FUNÇÃO PURA — estilo imutável: tira um instantâneo e retorna um NOVO instantâneo.
+    // NÃO modifica nada. Usada pelo GameController para pré-visualizar/gravar movimentos.
     static BoardSnapshot applyMove(const BoardSnapshot& current,
                                    int busIndex,
                                    int deltaRow,
