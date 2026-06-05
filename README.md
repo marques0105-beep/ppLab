@@ -59,9 +59,13 @@ levels.json – definição dos 3 níveis
 - Como Compilar
 
 git clone https://github.com/<utilizador>/ppLab.git
+
 cd ppLab
+
 cmake -B build -DCMAKE_BUILD_TYPE=Release
+
 cmake --build build
+
 ./build/appParkOut
 
 --------------------------------------------------------------------------
