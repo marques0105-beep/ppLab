@@ -33,39 +33,43 @@ Tecnologias e Paradigmas
 - UI: QML com animações e responsividade
 
 --------------------------------------------------------------------------
-- Estrutura do Projeto
+Estrutura do Projeto
 
-main.cpp – ponto de entrada, expõe o GameController ao QML e executa testes
+- main.cpp – ponto de entrada, expõe o GameController ao QML e executa testes
 
-gamecontroller.h/cpp – lógica principal, timers, movimentos, embarque, estados
+- gamecontroller.h/cpp – lógica principal, timers, movimentos, embarque, estados
 
-board.h/cpp – grelha, ocupação, gestão de slots
+- board.h/cpp – grelha, ocupação, gestão de slots
 
-bus.h/cpp – propriedades do autocarro (cor, capacidade, direção, posição, lotação)
+- bus.h/cpp – propriedades do autocarro (cor, capacidade, direção, posição, lotação)
 
-passenger.h – modelo simples de passageiro
+- passenger.h – modelo simples de passageiro
 
-gameanalytics.h – funções puras para pontuação e heurística
+- gameanalytics.h – funções puras para pontuação e heurística
 
-persistence.h/cpp – leitura/escrita do ficheiro savegame.json
+- persistence.h/cpp – leitura/escrita do ficheiro savegame.json
 
-gametests.h – testes unitários do motor
+- gametests.h – testes unitários do motor
 
-Main.qml – interface completa (menu, tabuleiro, fila, plataformas, overlays)
+- Main.qml – interface completa (menu, tabuleiro, fila, plataformas, overlays)
 
-levels.json – definição dos 3 níveis
+- levels.json – definição dos 3 níveis
 
 --------------------------------------------------------------------------
-- Como Compilar
+Como Compilar
 
 git clone https://github.com/<utilizador>/ppLab.git
+
 cd ppLab
+
 cmake -B build -DCMAKE_BUILD_TYPE=Release
+
 cmake --build build
+
 ./build/appParkOut
 
 --------------------------------------------------------------------------
-- Autores
+Autores
 
 - Gonçalo Marques — 30012478
 - Gonçalo Pardelhas — 30014665
