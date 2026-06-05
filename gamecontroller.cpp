@@ -8,6 +8,7 @@
 #include <QFile>
 #include <QDebug>
 
+// Construtor – inicializa o tabuleiro, variáveis de estado, timers e liga sinais
 GameController::GameController(QObject *parent)
     : QObject(parent), m_board(8, 8), m_moveCount(0),
     m_currentLevel(1), m_gameState("PLAYING"), m_score(0),
@@ -16,20 +17,26 @@ GameController::GameController(QObject *parent)
     m_stepTargetRow(-1), m_stepTargetCol(-1), m_stepDeltaRow(0),
     m_stepDeltaCol(0), m_stepExitedBoard(false), m_stepFreeSlot(-1)
 {
+
+    // Timer do cronómetro – incrementa os segundos decorridos e notifica a UI
     connect(&m_timer, &QTimer::timeout, this, [this]() {
         m_elapsedSeconds++;
         emit elapsedSecondsChanged();
     });
+
+    // Estes timers NÃO são single-shot; serão parados manualmente quando necessário
     m_moveStepTimer.setSingleShot(false);
     m_boardingTimer.setSingleShot(false);
 }
 
+// Destrutor – garante que todos os timers são parados para evitar execução após destruição
 GameController::~GameController() {
     m_timer.stop();
     m_boardingTimer.stop();
     m_moveStepTimer.stop();
 }
 
+// Converte a lista de passageiros (C++) num QVariantList utilizável pelo QML
 QVariantList GameController::getPassengerQueueForDisplay() const {
     QVariantList list;
     for (const auto& passenger : m_passengerQueue)
@@ -37,6 +44,7 @@ QVariantList GameController::getPassengerQueueForDisplay() const {
     return list;
 }
 
+// Converte a lista de autocarros no tabuleiro para QVariantList (cada autocarro é um mapa)
 QVariantList GameController::getBusesForDisplay() const {
     QVariantList list;
     const auto& buses = m_board.getBuses();
@@ -45,6 +53,8 @@ QVariantList GameController::getBusesForDisplay() const {
         map["color"]    = bus.getColor();
         map["capacity"] = bus.getCapacity();
         map["currentPassengers"] = bus.getCurrentPassengers();
+
+        // Direção convertida para string de um caractere: l, r, u, d
         QString dStr = "r";
         if      (bus.getDirection() == Direction::Left)  dStr = "l";
         else if (bus.getDirection() == Direction::Up)    dStr = "u";
@@ -57,6 +67,7 @@ QVariantList GameController::getBusesForDisplay() const {
     return list;
 }
 
+// Converte a lista de autocarros estacionados (nas plataformas) para QVariantList
 QVariantList GameController::getParkedBusesForDisplay() const {
     QVariantList list;
     for (const auto& parked : m_parkedBuses) {
@@ -70,7 +81,9 @@ QVariantList GameController::getParkedBusesForDisplay() const {
     return list;
 }
 
+// Movimento do autocarro 
 void GameController::handleBusClick(int busIndex) {
+    // Só permite movimento se o jogo estiver activo e não houver outro movimento em curso
     if (m_gameState != "PLAYING") return;
     if (m_moveStepTimer.isActive()) return; // já está a mover outro autocarro
 
@@ -78,6 +91,7 @@ void GameController::handleBusClick(int busIndex) {
     if (busIndex < 0 || busIndex >= static_cast<int>(buses.size())) return;
 
     Bus& bus = buses[busIndex];
+    // -10 é a posição especial que indica que o autocarro já saiu do tabuleiro
     if (bus.getRow() == -10 || bus.getCol() == -10) return;
 
     int currentR = bus.getRow();
@@ -112,6 +126,7 @@ void GameController::handleBusClick(int busIndex) {
         }
     }
 
+    // Se não houve qualquer deslocamento e o caminho estava bloqueado, reporta erro
     if (finalR == currentR && finalC == currentC && pathBlocked) {
         emit showNotification("⚠️ Caminho Bloqueado!");
         return;
