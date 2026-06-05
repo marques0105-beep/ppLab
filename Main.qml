@@ -133,17 +133,17 @@ Window {
                         text: "⬅ Menu"; 
                         onClicked: gameCtrl.goToMenu() 
                         }
-                    Button { text: "🔄 Reiniciar"; 
-                    onClicked: gameCtrl.setupTestLevel() }
+                    Button { 
+                        text: "🔄 Reiniciar"; 
+                        onClicked: gameCtrl.setupTestLevel() 
+                        }
                 }
                 Row {
                     spacing: 8
                     anchors.horizontalCenter: parent.horizontalCenter
-                    Rectangle { 
-                        width: 110; height: 38; color: "#16a085"; radius: 8
+                    Rectangle { width: 110; height: 38; color: "#16a085"; radius: 8
                         Text { anchors.centerIn: parent; text: "Jogadas: " + gameCtrl.moveCount; color: "white"; font.bold: true; font.pixelSize: 13 } }
-                    Rectangle { 
-                        width: 110; height: 38; color: "#3498db"; radius: 8
+                    Rectangle { width: 110; height: 38; color: "#3498db"; radius: 8
                         Text { anchors.centerIn: parent; text: "Pontos: " + gameCtrl.score; color: "white"; font.bold: true; font.pixelSize: 13 } }
                     Rectangle { width: 70; height: 38; color: "#8e44ad"; radius: 8
                         Text { anchors.centerIn: parent; color: "white"; font.bold: true; font.pixelSize: 13
@@ -331,17 +331,17 @@ Window {
                         Text { text: gameCtrl.gameState === "WON" ? "🏆 VITÓRIA!" : "💀 GAME OVER"; 
                         color: "white"; font.pixelSize: 32; font.bold: true; 
                         anchors.horizontalCenter: parent.horizontalCenter }
-                        Text { 
-                            text: gameCtrl.gameState === "WON" ? "Nível concluído com sucesso!" : "As plataformas ficaram cheias!"; 
-                            color: "white"; font.pixelSize: 16; 
-                            anchors.horizontalCenter: parent.horizontalCenter }
+                        Text { text: gameCtrl.gameState === "WON" ? "Nível concluído com sucesso!" : "As plataformas ficaram cheias!"; 
+                        color: "white"; 
+                        font.pixelSize: 16; 
+                        anchors.horizontalCenter: parent.horizontalCenter }
                         Button {
                             text: gameCtrl.gameState === "WON" ? "Voltar ao Menu" : "Tentar Novamente"; 
                             padding: 10; 
                             anchors.horizontalCenter: parent.horizontalCenter
                             onClicked: { 
-                                if (gameCtrl.gameState === "WON") gameCtrl.goToMenu(); 
-                                else gameCtrl.setupTestLevel() 
+                                if (gameCtrl.gameState === "WON") gameCtrl.goToMenu();
+                                 else gameCtrl.setupTestLevel() 
                             }
                         }
                     }
