@@ -9,24 +9,12 @@
 #include <QDebug>
 
 GameController::GameController(QObject *parent)
-    : QObject(parent),
-    m_board(8, 8),
-    m_moveCount(0),
-    m_currentLevel(1),
-    m_gameState("PLAYING"),
-    m_score(0),
-    m_dangerLevel("ESTÁVEL 🟢"),
-    m_inMenu(true),
-    m_initialPassengersCount(0),
-    m_elapsedSeconds(0),
-    m_currentParkedBusIndex(-1),
-    m_stepBusIndex(-1),
-    m_stepTargetRow(-1),
-    m_stepTargetCol(-1),
-    m_stepDeltaRow(0),
-    m_stepDeltaCol(0),
-    m_stepExitedBoard(false),
-    m_stepFreeSlot(-1)
+    : QObject(parent), m_board(8, 8), m_moveCount(0),
+    m_currentLevel(1), m_gameState("PLAYING"), m_score(0),
+    m_dangerLevel("ESTÁVEL 🟢"), m_inMenu(true), m_initialPassengersCount(0),
+    m_elapsedSeconds(0), m_currentParkedBusIndex(-1), m_stepBusIndex(-1),
+    m_stepTargetRow(-1), m_stepTargetCol(-1), m_stepDeltaRow(0),
+    m_stepDeltaCol(0), m_stepExitedBoard(false), m_stepFreeSlot(-1)
 {
     connect(&m_timer, &QTimer::timeout, this, [this]() {
         m_elapsedSeconds++;
