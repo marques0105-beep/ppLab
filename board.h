@@ -8,7 +8,7 @@ class Board {
 public:
     Board(int r, int c);
 
-    // Getters para as dimensões 
+    // Getters para as dimensões
     int getRows() const;
     int getCols() const;
 
@@ -25,7 +25,7 @@ public:
     int  getBusLength(int capacity) const;
 
     // Declaração do método de ocupação
-    bool isOccupied(int r, int c, int ignoreBusIndex = -1) const; 
+    bool isOccupied(int r, int c, int ignoreBusIndex = -1) const;
 
 
     // Funções de controlo das plataformas/slots de estacionamento
