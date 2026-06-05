@@ -55,7 +55,7 @@ public:
     Q_INVOKABLE void loadLevelAsync(int levelNumber);
     Q_INVOKABLE void setupTestLevel();
     Q_INVOKABLE void goToMenu();
-
+    Q_INVOKABLE void testImmutableExample();
     Q_INVOKABLE int  getLevelHighScore(int levelNumber) const;
     Q_INVOKABLE int  getLevelBestTime(int levelNumber) const;
     Q_INVOKABLE bool isLevelCompleted(int levelNumber) const;
@@ -84,6 +84,7 @@ private:
     };
 
     void processPassengerBoarding();
+    void processNextBoardingStep();
     void updateAnalytics();
     void checkGameStatus();
     LevelData readLevelFromJsonWorker(int levelNumber);
@@ -103,6 +104,10 @@ private:
 
     QTimer m_timer;
     int m_elapsedSeconds;
+
+    // Timer e estado para embarque animado
+    QTimer m_boardingTimer;
+    int m_currentParkedBusIndex;  // índice do autocarro que está a receber passageiros
 };
 
 #endif // GAMECONTROLLER_H
