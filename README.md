@@ -33,21 +33,27 @@ Tecnologias e Paradigmas
 - UI: QML com animações e responsividade
 
 --------------------------------------------------------------------------
-- Estrutura do Repositório
+- Estrutura do Projeto
 
-ppLab/
-├── CMakeLists.txt
-├── main.cpp
-├── Main.qml
-├── levels.json
-├── board.h / board.cpp
-├── bus.h / bus.cpp
-├── gamecontroller.h / gamecontroller.cpp
-├── gameanalytics.h
-├── persistence.h / persistence.cpp
-├── passenger.h
-├── gametests.h
-└── android/
+main.cpp – ponto de entrada, expõe o GameController ao QML e executa testes
+
+gamecontroller.h/cpp – lógica principal, timers, movimentos, embarque, estados
+
+board.h/cpp – grelha, ocupação, gestão de slots
+
+bus.h/cpp – propriedades do autocarro (cor, capacidade, direção, posição, lotação)
+
+passenger.h – modelo simples de passageiro
+
+gameanalytics.h – funções puras para pontuação e heurística
+
+persistence.h/cpp – leitura/escrita do ficheiro savegame.json
+
+gametests.h – testes unitários do motor
+
+Main.qml – interface completa (menu, tabuleiro, fila, plataformas, overlays)
+
+levels.json – definição dos 3 níveis
 
 --------------------------------------------------------------------------
 - Como Compilar
@@ -63,5 +69,7 @@ cmake --build build
 
 - Gonçalo Marques — 30012478
 - Gonçalo Pardelhas — 30014665
+
 Unidade Curricular: Programação por Paradigmas 
+
 Docente: Adrian Dediu
