@@ -15,6 +15,46 @@
         { "color": "green",  "capacity": 8,  "direction": "l", "row": 5, "col": 4 },
         { "color": "yellow", "capacity": 4,  "direction": "u", "row": 5, "col": 1 }
       ]
+    },
+    {
+      "levelId": 2,
+      "slotsCount": 6,
+      "passengers": [
+        "orange","orange","orange","orange","orange","orange","orange","orange","orange","orange","orange","orange",
+        "red","red","red","red","red","red","red","red","red","red",
+        "blue","blue","blue","blue","blue","blue","blue","blue","blue","blue",
+        "green","green","green","green","green","green","green","green","green","green"
+      ],
+      "buses": [
+        { "color": "orange", "capacity": 4,  "direction": "l", "row": 0, "col": 0 },
+        { "color": "red",    "capacity": 6,  "direction": "d", "row": 0, "col": 2 },
+        { "color": "blue",   "capacity": 4,  "direction": "l", "row": 0, "col": 5 },
+        { "color": "green",  "capacity": 6,  "direction": "u", "row": 4, "col": 0 },
+        { "color": "orange", "capacity": 8,  "direction": "r", "row": 3, "col": 3 },
+        { "color": "red",    "capacity": 4,  "direction": "d", "row": 5, "col": 3 },
+        { "color": "blue",   "capacity": 6,  "direction": "l", "row": 7, "col": 4 },
+        { "color": "green",  "capacity": 4,  "direction": "u", "row": 1, "col": 7 }
+      ]
+    },
+    {
+      "levelId": 3,
+      "slotsCount": 7,
+      "passengers": [
+        "red","red","red","red","red","red","red","red","red","red","red","red","red","red","red","red",
+        "blue","blue","blue","blue","blue","blue","blue","blue","blue","blue",
+        "green","green","green","green","green","green","green","green","green","green","green","green","green","green","green","green","green","green",
+        "yellow","yellow","yellow","yellow","yellow","yellow","yellow","yellow","yellow","yellow","yellow","yellow"
+      ],
+      "buses": [
+        { "color": "red",    "capacity": 12, "direction": "r", "row": 0, "col": 0 },
+        { "color": "blue",   "capacity": 4,  "direction": "d", "row": 1, "col": 0 },
+        { "color": "green",  "capacity": 6,  "direction": "l", "row": 1, "col": 3 },
+        { "color": "yellow", "capacity": 8,  "direction": "u", "row": 3, "col": 2 },
+        { "color": "red",    "capacity": 4,  "direction": "r", "row": 3, "col": 4 },
+        { "color": "blue",   "capacity": 6,  "direction": "d", "row": 4, "col": 4 },
+        { "color": "green",  "capacity": 12, "direction": "l", "row": 7, "col": 1 },
+        { "color": "yellow", "capacity": 4,  "direction": "u", "row": 4, "col": 7 }
+      ]
     }
   ]
 }
