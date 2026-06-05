@@ -29,7 +29,6 @@ class GameController : public QObject
 
     Q_PROPERTY(QVariantList passengerQueue READ getPassengerQueueForDisplay NOTIFY dataChanged)
     Q_PROPERTY(QVariantList buses READ getBusesForDisplay NOTIFY dataChanged)
-
     Q_PROPERTY(QVariantList parkedBuses READ getParkedBusesForDisplay NOTIFY dataChanged)
 
 public:
@@ -90,6 +89,8 @@ private:
     LevelData readLevelFromJsonWorker(int levelNumber);
     void applyLoadedLevel(LevelData data, int levelNumber);
 
+    void performNextMoveStep();  // movimento passo-a-passo
+
     Board m_board;
     std::vector<ParkedBusInfo> m_parkedBuses;
     QList<Passenger> m_passengerQueue;
@@ -105,9 +106,18 @@ private:
     QTimer m_timer;
     int m_elapsedSeconds;
 
-    // Timer e estado para embarque animado
+    // Timers para animações
     QTimer m_boardingTimer;
-    int m_currentParkedBusIndex;  // índice do autocarro que está a receber passageiros
+    int m_currentParkedBusIndex;
+
+    QTimer m_moveStepTimer;
+    int m_stepBusIndex;
+    int m_stepTargetRow;
+    int m_stepTargetCol;
+    int m_stepDeltaRow;
+    int m_stepDeltaCol;
+    bool m_stepExitedBoard;      
+    int m_stepFreeSlot;          
 };
 
 #endif // GAMECONTROLLER_H

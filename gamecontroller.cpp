@@ -19,17 +19,27 @@ GameController::GameController(QObject *parent)
     m_inMenu(true),
     m_initialPassengersCount(0),
     m_elapsedSeconds(0),
-    m_currentParkedBusIndex(-1)
+    m_currentParkedBusIndex(-1),
+    m_stepBusIndex(-1),
+    m_stepTargetRow(-1),
+    m_stepTargetCol(-1),
+    m_stepDeltaRow(0),
+    m_stepDeltaCol(0),
+    m_stepExitedBoard(false),
+    m_stepFreeSlot(-1)
 {
     connect(&m_timer, &QTimer::timeout, this, [this]() {
         m_elapsedSeconds++;
         emit elapsedSecondsChanged();
     });
+    m_moveStepTimer.setSingleShot(false);
+    m_boardingTimer.setSingleShot(false);
 }
 
 GameController::~GameController() {
     m_timer.stop();
     m_boardingTimer.stop();
+    m_moveStepTimer.stop();
 }
 
 QVariantList GameController::getPassengerQueueForDisplay() const {
@@ -46,7 +56,7 @@ QVariantList GameController::getBusesForDisplay() const {
         QVariantMap map;
         map["color"]    = bus.getColor();
         map["capacity"] = bus.getCapacity();
-        map["currentPassengers"] = bus.getCurrentPassengers(); // expor lotação actual
+        map["currentPassengers"] = bus.getCurrentPassengers();
         QString dStr = "r";
         if      (bus.getDirection() == Direction::Left)  dStr = "l";
         else if (bus.getDirection() == Direction::Up)    dStr = "u";
@@ -74,6 +84,7 @@ QVariantList GameController::getParkedBusesForDisplay() const {
 
 void GameController::handleBusClick(int busIndex) {
     if (m_gameState != "PLAYING") return;
+    if (m_moveStepTimer.isActive()) return; // já está a mover outro autocarro
 
     auto& buses = m_board.getBusesMutable();
     if (busIndex < 0 || busIndex >= static_cast<int>(buses.size())) return;
@@ -87,33 +98,28 @@ void GameController::handleBusClick(int busIndex) {
 
     int finalR = currentR, finalC = currentC;
     bool pathBlocked = false, exitedBoard = false;
+    int freeSlot = -1;
 
-    // Construir snapshot imutável (já existente)
-    GameAnalytics::BoardSnapshot snapshotBefore;
-    for (const auto& b : m_board.getBuses())
-        snapshotBefore.busPositions.push_back({b.getRow(), b.getCol()});
-    snapshotBefore.moveCount = m_moveCount;
-    snapshotBefore.score     = m_score;
-
+    // Calcula destino final (mesmo algoritmo de antes)
     while (true) {
         if (bus.getDirection() == Direction::Right) {
-            if (finalC + len >= m_board.getCols())               { exitedBoard = true; break; }
+            if (finalC + len >= m_board.getCols()) { exitedBoard = true; break; }
             if (m_board.isOccupied(finalR, finalC + len, busIndex)) { pathBlocked = true; break; }
             finalC++;
         }
         else if (bus.getDirection() == Direction::Left) {
-            if (finalC - 1 < 0)                                      { exitedBoard = true; break; }
-            if (m_board.isOccupied(finalR, finalC - 1, busIndex))    { pathBlocked = true; break; }
+            if (finalC - 1 < 0) { exitedBoard = true; break; }
+            if (m_board.isOccupied(finalR, finalC - 1, busIndex)) { pathBlocked = true; break; }
             finalC--;
         }
         else if (bus.getDirection() == Direction::Down) {
-            if (finalR + len >= m_board.getRows())               { exitedBoard = true; break; }
+            if (finalR + len >= m_board.getRows()) { exitedBoard = true; break; }
             if (m_board.isOccupied(finalR + len, finalC, busIndex)) { pathBlocked = true; break; }
             finalR++;
         }
         else if (bus.getDirection() == Direction::Up) {
-            if (finalR - 1 < 0)                                      { exitedBoard = true; break; }
-            if (m_board.isOccupied(finalR - 1, finalC, busIndex))    { pathBlocked = true; break; }
+            if (finalR - 1 < 0) { exitedBoard = true; break; }
+            if (m_board.isOccupied(finalR - 1, finalC, busIndex)) { pathBlocked = true; break; }
             finalR--;
         }
     }
@@ -124,52 +130,126 @@ void GameController::handleBusClick(int busIndex) {
     }
 
     if (exitedBoard) {
-        if (m_board.hasFreeSlot()) {
-            int freeSlot = m_board.getNextFreeSlotIndex();
-            m_board.occupySlot(freeSlot);
-            m_parkedBuses.push_back({bus, freeSlot});
-            bus.setPosition(-10, -10);
+        if (!m_board.hasFreeSlot()) {
+            emit showNotification("⚠️ Plataformas cheias!");
+            return;
+        }
+        freeSlot = m_board.getNextFreeSlotIndex();
+        // Guarda informação para quando o autocarro sair do tabuleiro
+        m_stepExitedBoard = true;
+        m_stepFreeSlot = freeSlot;
+        
+    } else {
+        m_stepExitedBoard = false;
+        m_stepFreeSlot = -1;
+    }
 
-            // Registo imutável (debug)
-            int dr = (bus.getDirection() == Direction::Up)   ? -1 :
-                         (bus.getDirection() == Direction::Down)  ?  1 : 0;
-            int dc = (bus.getDirection() == Direction::Left)  ? -1 :
-                         (bus.getDirection() == Direction::Right) ?  1 : 0;
-            GameAnalytics::BoardSnapshot snapshotAfter =
-                GameAnalytics::applyMove(snapshotBefore, busIndex, dr, dc);
-            qDebug() << "[Snapshot] Move recorded. New moveCount:" << snapshotAfter.moveCount;
+    // Configura movimento passo-a-passo
+    m_stepBusIndex = busIndex;
+    m_stepTargetRow = finalR;
+    m_stepTargetCol = finalC;
+    m_stepDeltaRow = (finalR > currentR) ? 1 : (finalR < currentR) ? -1 : 0;
+    m_stepDeltaCol = (finalC > currentC) ? 1 : (finalC < currentC) ? -1 : 0;
 
+    // Para o caso de já estar no destino (não devia acontecer)
+    if (m_stepDeltaRow == 0 && m_stepDeltaCol == 0) {
+        if (m_stepExitedBoard) {
+            // Estacionamento directo
+            Bus& b = buses[busIndex];
+            m_board.occupySlot(m_stepFreeSlot);
+            m_parkedBuses.push_back({b, m_stepFreeSlot});
+            b.setPosition(-10, -10);
             m_moveCount++;
             emit moveCountChanged();
             emit dataChanged();
-            processPassengerBoarding();   // inicia embarque animado
-        } else {
-            emit showNotification("⚠️ Plataformas cheias!");
+            processPassengerBoarding();
         }
         return;
     }
 
-    if (finalR != currentR || finalC != currentC) {
-        int dr = finalR - currentR;
-        int dc = finalC - currentC;
-        GameAnalytics::BoardSnapshot snapshotAfter =
-            GameAnalytics::applyMove(snapshotBefore, busIndex, dr, dc);
-        qDebug() << "[Snapshot] Intermediate move. New moveCount:" << snapshotAfter.moveCount;
+    // Desconecta para evitar múltiplas ligações
+    disconnect(&m_moveStepTimer, &QTimer::timeout, this, &GameController::performNextMoveStep);
+    connect(&m_moveStepTimer, &QTimer::timeout, this, &GameController::performNextMoveStep);
+    m_moveStepTimer.start(150); // 150 ms por passo
+}
 
-        bus.setPosition(finalR, finalC);
+void GameController::performNextMoveStep() {
+    auto& buses = m_board.getBusesMutable();
+    if (m_stepBusIndex < 0 || m_stepBusIndex >= static_cast<int>(buses.size())) {
+        m_moveStepTimer.stop();
+        return;
+    }
+
+    Bus& bus = buses[m_stepBusIndex];
+    int currentR = bus.getRow();
+    int currentC = bus.getCol();
+
+    // Se já chegou ao destino
+    if (currentR == m_stepTargetRow && currentC == m_stepTargetCol) {
+        m_moveStepTimer.stop();
+        // Se este movimento deveria terminar com estacionamento
+        if (m_stepExitedBoard && m_stepFreeSlot != -1) {
+            m_board.occupySlot(m_stepFreeSlot);
+            m_parkedBuses.push_back({bus, m_stepFreeSlot});
+            bus.setPosition(-10, -10);
+            emit showNotification("🚌 Autocarro estacionado");
+        }
+        // Incrementa moveCount apenas uma vez no final do movimento completo
         m_moveCount++;
         emit moveCountChanged();
         updateAnalytics();
         emit dataChanged();
         checkGameStatus();
+        // Inicia embarque se necessário
+        processPassengerBoarding();
+        return;
     }
+
+    // Calcula próxima posição
+    int newR = currentR + m_stepDeltaRow;
+    int newC = currentC + m_stepDeltaCol;
+
+    bool willExit = false;
+    if (m_stepDeltaRow != 0) {
+        if (newR < 0 || newR >= m_board.getRows()) willExit = true;
+    } else if (m_stepDeltaCol != 0) {
+        if (newC < 0 || newC >= m_board.getCols()) willExit = true;
+    }
+
+    if (willExit) {
+        // Se era esperado sair e temos slot, então estaciona agora
+        if (m_stepExitedBoard && m_stepFreeSlot != -1) {
+            m_board.occupySlot(m_stepFreeSlot);
+            m_parkedBuses.push_back({bus, m_stepFreeSlot});
+            bus.setPosition(-10, -10);
+            m_moveStepTimer.stop();
+            m_moveCount++;
+            emit moveCountChanged();
+            emit dataChanged();
+            processPassengerBoarding();
+        } else {
+            // Não devia sair, cancela movimento
+            m_moveStepTimer.stop();
+            emit showNotification("⚠️ Movimento inválido!");
+        }
+        return;
+    }
+
+    // Verifica colisão (ignora o próprio autocarro)
+    if (m_board.isOccupied(newR, newC, m_stepBusIndex)) {
+        m_moveStepTimer.stop();
+        emit showNotification("⚠️ Colisão durante o movimento!");
+        return;
+    }
+
+    // Executa o passo
+    bus.setPosition(newR, newC);
+    emit dataChanged();  
 }
 
-// --------------------------------------------------------------
-// NOVO: Embarque animado (passo-a-passo)
-// --------------------------------------------------------------
+
 void GameController::processPassengerBoarding() {
-    if (m_boardingTimer.isActive()) return; // já está a processar
+    if (m_boardingTimer.isActive()) return;
 
     if (m_passengerQueue.isEmpty() || m_parkedBuses.empty()) {
         updateAnalytics();
@@ -183,12 +263,10 @@ void GameController::processPassengerBoarding() {
         if (m_parkedBuses[i].bus.getColor() == nextColor && !m_parkedBuses[i].bus.isFull()) {
             m_currentParkedBusIndex = static_cast<int>(i);
             connect(&m_boardingTimer, &QTimer::timeout, this, &GameController::processNextBoardingStep, Qt::UniqueConnection);
-            m_boardingTimer.start(300); // 300 ms entre cada passageiro
+            m_boardingTimer.start(300);
             return;
         }
     }
-
-    // nenhum autocarro compatível
     updateAnalytics();
     emit dataChanged();
     checkGameStatus();
@@ -202,8 +280,6 @@ void GameController::processNextBoardingStep() {
         checkGameStatus();
         return;
     }
-
-    // verifica se o índice ainda é válido
     if (m_currentParkedBusIndex < 0 || m_currentParkedBusIndex >= static_cast<int>(m_parkedBuses.size())) {
         m_boardingTimer.stop();
         processPassengerBoarding();
@@ -214,38 +290,31 @@ void GameController::processNextBoardingStep() {
     QString nextColor = m_passengerQueue.first().color;
 
     if (currentBus.getColor() == nextColor && !currentBus.isFull()) {
-        // embarca UM passageiro
         currentBus.addPassenger();
         m_passengerQueue.removeFirst();
-        emit dataChanged();  // atualiza UI (inclui contador)
+        emit dataChanged();
 
-        // se o autocarro ficou cheio, remove-o e para este ciclo
         if (currentBus.isFull()) {
             m_parkedBuses.erase(m_parkedBuses.begin() + m_currentParkedBusIndex);
-            // atualiza slots
             m_board.clearSlots();
             for (const auto& parked : m_parkedBuses)
                 m_board.occupySlot(parked.slotIndex);
             emit dataChanged();
             m_boardingTimer.stop();
-            // continua com outros autocarros/passageiros
             processPassengerBoarding();
             return;
         }
 
-        // se ainda há mais passageiros da mesma cor e o autocarro tem espaço, continuamos
         if (!m_passengerQueue.isEmpty() && m_passengerQueue.first().color == currentBus.getColor() && !currentBus.isFull()) {
-            // o timer chama novamente este método
-            return;
+            return; // continua no mesmo autocarro
         } else {
             m_boardingTimer.stop();
-            processPassengerBoarding(); // muda para outro autocarro
+            processPassengerBoarding();
         }
     } else {
         m_boardingTimer.stop();
-        processPassengerBoarding(); // cor não coincide, procura outro autocarro
+        processPassengerBoarding();
     }
-
     updateAnalytics();
 }
 
@@ -254,8 +323,7 @@ void GameController::updateAnalytics() {
     int activeBusesCount = 0;
     for (const auto& b : m_board.getBuses())
         if (b.getRow() != -10) activeBusesCount++;
-
-    m_score      = GameAnalytics::calculateScore(m_moveCount, m_initialPassengersCount, m_passengerQueue.size());
+    m_score = GameAnalytics::calculateScore(m_moveCount, m_initialPassengersCount, m_passengerQueue.size());
     m_dangerLevel = GameAnalytics::evaluateBoardDanger(activeBusesCount, freeSlotsCount, m_passengerQueue.size());
     emit scoreChanged();
     emit dangerLevelChanged();
@@ -287,31 +355,28 @@ GameController::LevelData GameController::readLevelFromJsonWorker(int levelNumbe
     QJsonDocument doc = QJsonDocument::fromJson(data);
     if (doc.isNull() || !doc.isObject()) return result;
 
-    QJsonObject rootObj    = doc.object();
-    QJsonArray  levelsArray = rootObj["levels"].toArray();
+    QJsonObject rootObj = doc.object();
+    QJsonArray levelsArray = rootObj["levels"].toArray();
     QJsonObject levelObj;
     bool levelFound = false;
     for (int i = 0; i < levelsArray.size(); ++i) {
         QJsonObject cur = levelsArray[i].toObject();
         if (cur["levelId"].toInt() == levelNumber) {
-            levelObj   = cur;
+            levelObj = cur;
             levelFound = true;
             break;
         }
     }
     if (!levelFound) return result;
-
     if (levelObj.contains("slotsCount"))
         result.slotsCount = levelObj["slotsCount"].toInt();
-
     for (const auto& val : levelObj["passengers"].toArray())
         result.passengers.append(Passenger(val.toString()));
-
     for (const auto& val : levelObj["buses"].toArray()) {
-        QJsonObject bObj   = val.toObject();
-        QString     dirStr = bObj["direction"].toString();
+        QJsonObject bObj = val.toObject();
+        QString dirStr = bObj["direction"].toString();
         Direction dir = Direction::Right;
-        if      (dirStr == "l") dir = Direction::Left;
+        if (dirStr == "l") dir = Direction::Left;
         else if (dirStr == "u") dir = Direction::Up;
         else if (dirStr == "d") dir = Direction::Down;
         result.buses.push_back(Bus(bObj["color"].toString(),
@@ -326,53 +391,47 @@ GameController::LevelData GameController::readLevelFromJsonWorker(int levelNumbe
 
 void GameController::applyLoadedLevel(LevelData data, int levelNumber) {
     if (!data.success) { emit showNotification("❌ Erro ao carregar o nível!"); return; }
-
     m_timer.stop();
-    m_boardingTimer.stop();  // para qualquer embarque em curso
+    m_boardingTimer.stop();
+    m_moveStepTimer.stop();
     m_elapsedSeconds = 0;
-
     m_board = Board(8, 8);
     m_board.setNumSlots(data.slotsCount);
     m_parkedBuses.clear();
     m_board.clearSlots();
     for (const auto& bus : data.buses) m_board.addBus(bus);
-
-    m_passengerQueue         = data.passengers;
+    m_passengerQueue = data.passengers;
     m_initialPassengersCount = data.passengers.size();
-    m_currentLevel           = levelNumber;
-
-    m_moveCount   = 0;
-    m_gameState   = "PLAYING";
-    m_inMenu      = false;
-
-    m_score      = GameAnalytics::calculateScore(0, m_initialPassengersCount, m_initialPassengersCount);
+    m_currentLevel = levelNumber;
+    m_moveCount = 0;
+    m_gameState = "PLAYING";
+    m_inMenu = false;
+    m_score = GameAnalytics::calculateScore(0, m_initialPassengersCount, m_initialPassengersCount);
     m_dangerLevel = "ESTÁVEL 🟢";
-
     m_timer.start(1000);
     emit elapsedSecondsChanged();
-
     emit moveCountChanged();
     emit scoreChanged();
     emit dangerLevelChanged();
     emit inMenuChanged();
     emit dataChanged();
     emit gameStateChanged();
-
-    processPassengerBoarding();  // inicia embarque, se houver passageiros e autocarros estacionados
+    processPassengerBoarding();
 }
 
 void GameController::checkGameStatus() {
     if (m_gameState != "PLAYING") return;
 
     bool anyBusesLeft = false;
-    for (const auto& b : m_board.getBuses()) {
+    for (const auto& b : m_board.getBuses())
         if (b.getRow() != -10) { anyBusesLeft = true; break; }
-    }
 
+    // VITÓRIA
     if (!anyBusesLeft && m_passengerQueue.isEmpty() && m_parkedBuses.empty()) {
         m_gameState = "WON";
         m_timer.stop();
         m_boardingTimer.stop();
+        m_moveStepTimer.stop();
         Persistence::saveScore(m_currentLevel, m_score);
         Persistence::saveBestTime(m_currentLevel, m_elapsedSeconds);
         Persistence::markLevelCompleted(m_currentLevel);
@@ -380,7 +439,8 @@ void GameController::checkGameStatus() {
         return;
     }
 
-    if (!m_board.hasFreeSlot() && !m_passengerQueue.isEmpty() && !anyBusesLeft) {
+    // DERROTA
+    if (!m_board.hasFreeSlot() && !m_passengerQueue.isEmpty()) {
         bool matchFound = false;
         QString nextColor = m_passengerQueue.first().color;
         for (const auto& parked : m_parkedBuses) {
@@ -393,7 +453,10 @@ void GameController::checkGameStatus() {
             m_gameState = "LOST";
             m_timer.stop();
             m_boardingTimer.stop();
+            m_moveStepTimer.stop();
             emit gameStateChanged();
+            emit showNotification("💀 Derrota! Sem plataformas compatíveis.");
+            return;
         }
     }
 }
@@ -402,18 +465,18 @@ void GameController::setupTestLevel() {
     loadLevelAsync(m_currentLevel);
 }
 
-int  GameController::getLevelHighScore(int levelNumber) const { return Persistence::getHighScore(levelNumber); }
-int  GameController::getLevelBestTime(int levelNumber)  const { return Persistence::getBestTime(levelNumber); }
-bool GameController::isLevelCompleted(int levelNumber)  const { return Persistence::isLevelCompleted(levelNumber); }
+int GameController::getLevelHighScore(int levelNumber) const { return Persistence::getHighScore(levelNumber); }
+int GameController::getLevelBestTime(int levelNumber) const { return Persistence::getBestTime(levelNumber); }
+bool GameController::isLevelCompleted(int levelNumber) const { return Persistence::isLevelCompleted(levelNumber); }
 
 void GameController::goToMenu() {
     m_timer.stop();
     m_boardingTimer.stop();
+    m_moveStepTimer.stop();
     m_inMenu = true;
     emit inMenuChanged();
 }
 
-// Método de exemplo do paradigma imutável (podes manter)
 void GameController::testImmutableExample() {
     GameAnalytics::BoardSnapshot snapshot;
     const auto& buses = m_board.getBuses();
@@ -423,7 +486,7 @@ void GameController::testImmutableExample() {
     snapshot.score = m_score;
     if (!snapshot.busPositions.empty()) {
         GameAnalytics::BoardSnapshot newSnap = GameAnalytics::applyMove(snapshot, 0, 0, 1);
-        qDebug() << "[Immutable test] Original moveCount:" << snapshot.moveCount
+        qDebug() << "[Immutable] original moveCount:" << snapshot.moveCount 
                  << " New:" << newSnap.moveCount;
     }
 }
