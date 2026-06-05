@@ -1,8 +1,6 @@
 #include "board.h"
 
-Board::Board(int r, int c) 
-    : m_rows(r), 
-    m_cols(c) {
+Board::Board(int r, int c) : m_rows(r), m_cols(c) {
     m_slots.resize(6, false); // Valor padrão inicial
 }
 
