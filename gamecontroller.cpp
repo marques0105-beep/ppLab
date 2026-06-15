@@ -16,7 +16,6 @@ GameController::GameController(QObject *parent)
     m_currentLevel(1),
     m_gameState("PLAYING"),
     m_score(0),
-    m_dangerLevel("ESTÁVEL 🟢"),
     m_inMenu(true),
     m_initialPassengersCount(0),
     m_elapsedSeconds(0),
@@ -67,7 +66,7 @@ QVariantList GameController::getBusesForDisplay() const {
 
         // Direção convertida para string de um caractere: l, r, u, d
         QString dStr = "r";
-        if      (bus.getDirection() == Direction::Left)  dStr = "l";
+        if (bus.getDirection() == Direction::Left)  dStr = "l";
         else if (bus.getDirection() == Direction::Up)    dStr = "u";
         else if (bus.getDirection() == Direction::Down)  dStr = "d";
         map["direction"] = dStr;
@@ -83,10 +82,10 @@ QVariantList GameController::getParkedBusesForDisplay() const {
     QVariantList list;
     for (const auto& parked : m_parkedBuses) {
         QVariantMap map;
-        map["color"]             = parked.bus.getColor();
-        map["capacity"]          = parked.bus.getCapacity();
+        map["color"] = parked.bus.getColor();
+        map["capacity"] = parked.bus.getCapacity();
         map["currentPassengers"] = parked.bus.getCurrentPassengers();
-        map["slotIndex"]         = parked.slotIndex;
+        map["slotIndex"] = parked.slotIndex;
         list.append(map);
     }
     return list;
@@ -107,13 +106,13 @@ void GameController::handleBusClick(int busIndex) {
 
     int currentR = bus.getRow();
     int currentC = bus.getCol();
-    int len      = bus.getCapacity() / 2;
+    int len = bus.getCapacity() / 2;
 
     int finalR = currentR, finalC = currentC;
     bool pathBlocked = false, exitedBoard = false;
     int freeSlot = -1;
 
-    // Calcula destino final (mesmo algoritmo de antes)
+    // Calcula destino final do autocarro, verificando colisões e saída do tabuleiro
     while (true) {
         if (bus.getDirection() == Direction::Right) {
             if (finalC + len >= m_board.getCols()) { exitedBoard = true; break; }
@@ -198,7 +197,7 @@ void GameController::performNextMoveStep() {
     int currentR = bus.getRow();
     int currentC = bus.getCol();
 
-    // Se já chegou ao destino
+     // Se já chegou ao destino
     if (currentR == m_stepTargetRow && currentC == m_stepTargetCol) {
         m_moveStepTimer.stop();
         // Se este movimento deveria terminar com estacionamento
@@ -332,14 +331,9 @@ void GameController::processNextBoardingStep() {
 }
 
 void GameController::updateAnalytics() {
-    int freeSlotsCount  = m_board.getNumSlots() - static_cast<int>(m_parkedBuses.size());
-    int activeBusesCount = 0;
-    for (const auto& b : m_board.getBuses())
-        if (b.getRow() != -10) activeBusesCount++;
+    int freeSlotsCount   = m_board.getNumSlots() - static_cast<int>(m_parkedBuses.size());
     m_score = GameAnalytics::calculateScore(m_moveCount, m_initialPassengersCount, m_passengerQueue.size());
-    m_dangerLevel = GameAnalytics::evaluateBoardDanger(activeBusesCount, freeSlotsCount, m_passengerQueue.size());
     emit scoreChanged();
-    emit dangerLevelChanged();
 }
 
 void GameController::loadLevelAsync(int levelNumber) {
@@ -420,12 +414,10 @@ void GameController::applyLoadedLevel(LevelData data, int levelNumber) {
     m_gameState = "PLAYING";
     m_inMenu = false;
     m_score = GameAnalytics::calculateScore(0, m_initialPassengersCount, m_initialPassengersCount);
-    m_dangerLevel = "ESTÁVEL 🟢";
     m_timer.start(1000);
     emit elapsedSecondsChanged();
     emit moveCountChanged();
     emit scoreChanged();
-    emit dangerLevelChanged();
     emit inMenuChanged();
     emit dataChanged();
     emit gameStateChanged();
@@ -492,6 +484,13 @@ void GameController::goToMenu() {
     emit inMenuChanged();
 }
 
+// Apagar todo o progresso
+void GameController::resetProgress() {
+    Persistence::clearAllProgress();
+    emit progressReset(); // QML escuta isto para refrescar o menu
+    emit showNotification("🗑️ Progresso apagado com sucesso!");
+}
+
 void GameController::testImmutableExample() {
     GameAnalytics::BoardSnapshot snapshot;
     const auto& buses = m_board.getBuses();
@@ -501,15 +500,6 @@ void GameController::testImmutableExample() {
     snapshot.score = m_score;
     if (!snapshot.busPositions.empty()) {
         GameAnalytics::BoardSnapshot newSnap = GameAnalytics::applyMove(snapshot, 0, 0, 1);
-        qDebug() << "[Immutable] original moveCount:" << snapshot.moveCount 
-                 << " new:" << newSnap.moveCount;
+        qDebug() << "[Immutable] original moveCount:" << snapshot.moveCount << " new:" << newSnap.moveCount;
     }
-}
-
-
-// Apagar todo o progresso
-void GameController::resetProgress() {
-    Persistence::clearAllProgress();
-    emit progressReset();           // QML escuta isto para refrescar o menu
-    emit showNotification("🗑️ Progresso apagado com sucesso!");
 }
