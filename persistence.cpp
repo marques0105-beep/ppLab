@@ -1,5 +1,3 @@
-percistence.cpp
-
 #include "persistence.h"
 #include <QFile>
 #include <QJsonDocument>
@@ -64,6 +62,18 @@ void Persistence::markLevelCompleted(int levelNumber) {
     QString key = QString("completed_level_%1").arg(levelNumber);
     data[key] = true;
     writeSaveFile(data);
+}
+
+// ==========================
+// RESET / APAGAR PROGRESSO
+// ==========================
+
+void Persistence::clearAllProgress() {
+    // Sobrescreve o ficheiro com um objecto vazio.
+    // Apaga recordes, tempos e níveis concluídos de uma só vez.
+    QJsonObject empty;
+    writeSaveFile(empty);
+    qDebug() << "🗑️ Progresso apagado: savegame.json reinicializado.";
 }
 
 // ==========================
