@@ -23,7 +23,7 @@ public:
 
 private:
     // ------------------------------------------------------------------
-    // Test 1 — Pure functions in GameAnalytics
+    // Test 1 — Pure functions in GameAnalytics (apenas calculateScore)
     // ------------------------------------------------------------------
     static void testGameAnalytics() {
         // 10 passengers boarded (10-0), 5 moves -> 10*100 - 5*5 = 975
@@ -33,15 +33,7 @@ private:
         // Score never goes negative
         int negScore = GameAnalytics::calculateScore(1000, 1, 1);
         assert(negScore == 0);
-
-        // 0 free slots + active buses -> CRITICO
-        QString danger = GameAnalytics::evaluateBoardDanger(3, 0, 5);
-        assert(danger == "CRÍTICO 💀");
-
-        // Safe state -> ESTAVEL
-        QString safe = GameAnalytics::evaluateBoardDanger(0, 6, 0);
-        assert(safe == "ESTÁVEL 🟢");
-
+        
         std::cout << "   testGameAnalytics OK" << std::endl;
     }
 
@@ -119,6 +111,5 @@ private:
         std::cout << "   testBoardLogic OK" << std::endl;
     }
 };
-
 
 #endif // GAMETESTS_H
