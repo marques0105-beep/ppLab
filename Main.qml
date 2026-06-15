@@ -11,6 +11,10 @@ Window {
 
     property real boardSize: Math.min(width, 520) - 16
 
+    // contador que força a reavaliação dos bindings do menu
+    // sempre que o progresso é apagado ou um nível é concluído.
+    property int refreshTick: 0
+
     Connections {
         target: gameCtrl
         function onShowNotification(message) {
@@ -18,12 +22,40 @@ Window {
             notificationPopup.opacity = 1.0
             notificationTimer.restart()
         }
+        // sempre que o progresso muda, incrementamos o tick
+        // para forçar o Repeater a chamar de novo as funções getLevelHighScore etc.
+        function onProgressReset() {
+            refreshTick = refreshTick + 1
+        }
     }
 
     Timer {
         id: notificationTimer
         interval: 2000
         onTriggered: notificationPopup.opacity = 0.0
+    }
+
+    // ========== DIÁLOGO DE CONFIRMAÇÃO ==========
+    Dialog {
+        id: confirmResetDialog
+        modal: true
+        anchors.centerIn: parent
+        title: "Apagar progresso?"
+        standardButtons: Dialog.Yes | Dialog.No
+
+        contentItem: Text {
+            text: "Tem a certeza de que deseja apagar TODO o progresso?\n\n" +
+                  "Isto inclui:\n" +
+                  "• Todos os recordes de pontuação\n" +
+                  "• Todos os melhores tempos\n" +
+                  "• Estado de conclusão dos níveis\n\n" +
+                  "Esta acção NÃO pode ser desfeita."
+            color: "black"
+            wrapMode: Text.WordWrap
+            width: 320
+        }
+
+        onAccepted: gameCtrl.resetProgress()
     }
 
     // ========== MENU ==========
@@ -67,6 +99,13 @@ Window {
                 scale: levelMouseArea.pressed ? 0.96 : 1.0
                 Behavior on scale { NumberAnimation { duration: 100 } }
 
+                // ao referenciar root.refreshTick aqui dentro,
+                // qualquer alteração a essa propriedade reavalia os bindings
+                // que dependem do progresso guardado.
+                property int highScore: (root.refreshTick, gameCtrl.getLevelHighScore(modelData))
+                property int bestTime:  (root.refreshTick, gameCtrl.getLevelBestTime(modelData))
+                property bool completed: (root.refreshTick, gameCtrl.isLevelCompleted(modelData))
+
                 Column {
                     anchors.centerIn: parent
                     spacing: 4
@@ -76,18 +115,18 @@ Window {
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
                     Text {
-                        text: "Recorde: " + gameCtrl.getLevelHighScore(modelData) + " pts"
+                        text: "Recorde: " + highScore + " pts"
                         color: "#bdc3c7"; font.pixelSize: 12
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
                     Text {
-                        text: "Tempo: " + gameCtrl.getLevelBestTime(modelData) + " s"
+                        text: "Tempo: " + bestTime + " s"
                         color: "#bdc3c7"; font.pixelSize: 12
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
                     Text {
-                        text: gameCtrl.isLevelCompleted(modelData) ? "✅ Concluído" : "❌ Não concluído"
-                        color: gameCtrl.isLevelCompleted(modelData) ? "#2ecc71" : "#e74c3c"
+                        text: completed ? "✅ Concluído" : "❌ Não concluído"
+                        color: completed ? "#2ecc71" : "#e74c3c"
                         font.pixelSize: 12
                         anchors.horizontalCenter: parent.horizontalCenter
                     }
@@ -97,6 +136,31 @@ Window {
                     anchors.fill: parent
                     onClicked: gameCtrl.loadLevelAsync(modelData)
                 }
+            }
+        }
+
+        // ========== APAGAR PROGRESSO ==========
+        Button {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "🗑️  Apagar Progresso"
+            padding: 10
+            onClicked: confirmResetDialog.open()
+
+            contentItem: Text {
+                text: parent.text
+                color: "white"
+                font.bold: true
+                font.pixelSize: 14
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+            }
+            background: Rectangle {
+                color: parent.pressed ? "#a93226" : "#c0392b"
+                radius: 8
+                border.color: "#7b241c"
+                border.width: 2
+                implicitWidth: 220
+                implicitHeight: 42
             }
         }
     }
@@ -129,14 +193,8 @@ Window {
                 Row {
                     spacing: 10
                     anchors.horizontalCenter: parent.horizontalCenter
-                    Button { 
-                        text: "⬅ Menu"; 
-                        onClicked: gameCtrl.goToMenu() 
-                        }
-                    Button { 
-                        text: "🔄 Reiniciar"; 
-                        onClicked: gameCtrl.setupTestLevel() 
-                        }
+                    Button { text: "⬅ Menu"; onClicked: gameCtrl.goToMenu() }
+                    Button { text: "🔄 Reiniciar"; onClicked: gameCtrl.setupTestLevel() }
                 }
                 Row {
                     spacing: 8
@@ -171,15 +229,14 @@ Window {
                     color: "white"; font.pointSize: 14; font.bold: true; 
                     anchors.horizontalCenter: parent.horizontalCenter }
                 Flickable {
-                    width: root.boardSize; 
+                    width: root.boardSize;
                     height: 45
-                    contentWidth: passengerRow.implicitWidth; 
-                    contentHeight: height; 
-                    clip: true; 
+                    contentWidth: passengerRow.implicitWidth;
+                    contentHeight: height;
+                    clip: true;
                     flickableDirection: Flickable.HorizontalFlick
                     Row {
-                        id: passengerRow; 
-                        spacing: 10
+                        id: passengerRow; spacing: 10
                         Repeater {
                             model: gameCtrl.passengerQueue
                             Rectangle {
@@ -269,7 +326,7 @@ Window {
                         height: (!isHoriz ? busLen * cellSize : cellSize) - 4
                         color: modelData.color; radius: 8; border.color: "#1a1a1a"; border.width: 2
 
-                        // Animações mais longas: 400 ms
+                        // Animações 
                         Behavior on x { NumberAnimation { duration: 400; easing.type: Easing.OutQuad } }
                         Behavior on y { NumberAnimation { duration: 400; easing.type: Easing.OutQuad } }
 
@@ -328,30 +385,30 @@ Window {
                     color: gameCtrl.gameState === "WON" ? "#e027ae60" : "#e0c0392b"
                     Column {
                         anchors.centerIn: parent; spacing: 20
-                        Text { text: gameCtrl.gameState === "WON" ? "🏆 VITÓRIA!" : "💀 GAME OVER"; 
-                        color: "white"; font.pixelSize: 32; font.bold: true; 
+                        Text { text: gameCtrl.gameState === "WON" ? "🏆 VITÓRIA!" : "💀 GAME OVER";
+                        color: "white"; font.pixelSize: 32; font.bold: true;
                         anchors.horizontalCenter: parent.horizontalCenter }
                         Text { text: gameCtrl.gameState === "WON" ? "Nível concluído com sucesso!" : "As plataformas ficaram cheias!"; 
                         color: "white"; 
-                        font.pixelSize: 16; 
+                        font.pixelSize: 16;
                         anchors.horizontalCenter: parent.horizontalCenter }
                         Button {
-                            text: gameCtrl.gameState === "WON" ? "Voltar ao Menu" : "Tentar Novamente"; 
-                            padding: 10; 
+                            text: gameCtrl.gameState === "WON" ? "Voltar ao Menu" : "Tentar Novamente";
+                            padding: 10;
                             anchors.horizontalCenter: parent.horizontalCenter
                             onClicked: { 
                                 if (gameCtrl.gameState === "WON") gameCtrl.goToMenu();
-                                 else gameCtrl.setupTestLevel() 
+                                else gameCtrl.setupTestLevel() 
                             }
                         }
                     }
                 }
             }
 
-            Text { 
+            Text {
                 text: "Nível Atual: " + gameCtrl.currentLevel; 
-                color: "#bdc3c7"; 
-                font.pixelSize: 14; 
+                color: "#bdc3c7";
+                font.pixelSize: 14;
                 anchors.horizontalCenter: parent.horizontalCenter }
         }
     }
