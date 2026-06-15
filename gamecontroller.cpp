@@ -10,14 +10,25 @@
 
 // Construtor – inicializa o tabuleiro, variáveis de estado, timers e liga sinais
 GameController::GameController(QObject *parent)
-    : QObject(parent), m_board(8, 8), m_moveCount(0),
-    m_currentLevel(1), m_gameState("PLAYING"), m_score(0),
-    m_dangerLevel("ESTÁVEL 🟢"), m_inMenu(true), m_initialPassengersCount(0),
-    m_elapsedSeconds(0), m_currentParkedBusIndex(-1), m_stepBusIndex(-1),
-    m_stepTargetRow(-1), m_stepTargetCol(-1), m_stepDeltaRow(0),
-    m_stepDeltaCol(0), m_stepExitedBoard(false), m_stepFreeSlot(-1)
+    : QObject(parent),
+    m_board(8, 8),
+    m_moveCount(0),
+    m_currentLevel(1),
+    m_gameState("PLAYING"),
+    m_score(0),
+    m_dangerLevel("ESTÁVEL 🟢"),
+    m_inMenu(true),
+    m_initialPassengersCount(0),
+    m_elapsedSeconds(0),
+    m_currentParkedBusIndex(-1),
+    m_stepBusIndex(-1),
+    m_stepTargetRow(-1),
+    m_stepTargetCol(-1),
+    m_stepDeltaRow(0),
+    m_stepDeltaCol(0),
+    m_stepExitedBoard(false),
+    m_stepFreeSlot(-1)
 {
-
     // Timer do cronómetro – incrementa os segundos decorridos e notifica a UI
     connect(&m_timer, &QTimer::timeout, this, [this]() {
         m_elapsedSeconds++;
@@ -132,6 +143,7 @@ void GameController::handleBusClick(int busIndex) {
         return;
     }
 
+    // Se o autocarro saiu do tabuleiro
     if (exitedBoard) {
         if (!m_board.hasFreeSlot()) {
             emit showNotification("⚠️ Plataformas cheias!");
@@ -141,7 +153,6 @@ void GameController::handleBusClick(int busIndex) {
         // Guarda informação para quando o autocarro sair do tabuleiro
         m_stepExitedBoard = true;
         m_stepFreeSlot = freeSlot;
-        
     } else {
         m_stepExitedBoard = false;
         m_stepFreeSlot = -1;
@@ -247,9 +258,8 @@ void GameController::performNextMoveStep() {
 
     // Executa o passo
     bus.setPosition(newR, newC);
-    emit dataChanged();  
+    emit dataChanged();
 }
-
 
 void GameController::processPassengerBoarding() {
     if (m_boardingTimer.isActive()) return;
@@ -439,6 +449,8 @@ void GameController::checkGameStatus() {
         Persistence::saveBestTime(m_currentLevel, m_elapsedSeconds);
         Persistence::markLevelCompleted(m_currentLevel);
         emit gameStateChanged();
+        // Notifica o menu para refrescar os recordes/estado de conclusão
+        emit progressReset();
         return;
     }
 
@@ -490,6 +502,14 @@ void GameController::testImmutableExample() {
     if (!snapshot.busPositions.empty()) {
         GameAnalytics::BoardSnapshot newSnap = GameAnalytics::applyMove(snapshot, 0, 0, 1);
         qDebug() << "[Immutable] original moveCount:" << snapshot.moveCount 
-                 << " New:" << newSnap.moveCount;
+                 << " new:" << newSnap.moveCount;
     }
+}
+
+
+// Apagar todo o progresso
+void GameController::resetProgress() {
+    Persistence::clearAllProgress();
+    emit progressReset();           // QML escuta isto para refrescar o menu
+    emit showNotification("🗑️ Progresso apagado com sucesso!");
 }
