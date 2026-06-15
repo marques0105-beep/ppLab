@@ -59,6 +59,9 @@ public:
     Q_INVOKABLE int  getLevelBestTime(int levelNumber) const;
     Q_INVOKABLE bool isLevelCompleted(int levelNumber) const;
 
+    // apaga todo o progresso (recordes, tempos, níveis concluídos)
+    Q_INVOKABLE void resetProgress();
+
 signals:
     void moveCountChanged();
     void gameStateChanged();
@@ -68,6 +71,9 @@ signals:
     void dataChanged();
     void elapsedSecondsChanged();
     void showNotification(QString message);
+
+    // emitido quando o progresso é apagado, para o QML refrescar o menu
+    void progressReset();
 
 private:
     struct ParkedBusInfo {
@@ -116,8 +122,8 @@ private:
     int m_stepTargetCol;
     int m_stepDeltaRow;
     int m_stepDeltaCol;
-    bool m_stepExitedBoard;      
-    int m_stepFreeSlot;          
+    bool m_stepExitedBoard;
+    int m_stepFreeSlot;
 };
 
 #endif // GAMECONTROLLER_H

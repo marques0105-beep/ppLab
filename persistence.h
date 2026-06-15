@@ -1,5 +1,3 @@
-persistence.h
-
 #ifndef PERSISTENCE_H
 #define PERSISTENCE_H
 
@@ -29,6 +27,11 @@ public:
     // ==========================
     static bool isLevelCompleted(int levelNumber);
     static void markLevelCompleted(int levelNumber);
+
+    // ==========================
+    // RESET / APAGAR PROGRESSO
+    // ==========================
+    static void clearAllProgress();
 
 private:
     static QString     saveFilePath();
