@@ -106,6 +106,7 @@ Window {
                 property int bestTime:  (root.refreshTick, gameCtrl.getLevelBestTime(modelData))
                 property bool completed: (root.refreshTick, gameCtrl.isLevelCompleted(modelData))
 
+
                 Column {
                     anchors.centerIn: parent
                     spacing: 4
@@ -139,7 +140,7 @@ Window {
             }
         }
 
-        // ========== APAGAR PROGRESSO ==========
+        // Botão Apagar Progresso
         Button {
             anchors.horizontalCenter: parent.horizontalCenter
             text: "🗑️  Apagar Progresso"
@@ -206,8 +207,6 @@ Window {
                     Rectangle { width: 70; height: 38; color: "#8e44ad"; radius: 8
                         Text { anchors.centerIn: parent; color: "white"; font.bold: true; font.pixelSize: 13
                             text: { let m = Math.floor(gameCtrl.elapsedSeconds / 60); let s = gameCtrl.elapsedSeconds % 60; return (m<10?"0"+m:m)+":"+(s<10?"0"+s:s); } } }
-                    Rectangle { width: 110; height: 38; color: "#34495e"; radius: 8; border.color: "#bdc3c7"
-                        Text { anchors.centerIn: parent; text: gameCtrl.dangerLevel; color: "white"; font.bold: true; font.pixelSize: 12 } }
                 }
             }
 
