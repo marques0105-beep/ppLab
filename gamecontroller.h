@@ -22,7 +22,6 @@ class GameController : public QObject
     Q_PROPERTY(QString gameState READ gameState NOTIFY gameStateChanged)
 
     Q_PROPERTY(int score READ score NOTIFY scoreChanged)
-    Q_PROPERTY(QString dangerLevel READ dangerLevel NOTIFY dangerLevelChanged)
 
     Q_PROPERTY(bool inMenu READ inMenu NOTIFY inMenuChanged)
     Q_PROPERTY(int elapsedSeconds READ elapsedSeconds NOTIFY elapsedSecondsChanged)
@@ -42,7 +41,6 @@ public:
     int currentLevel() const { return m_currentLevel; }
     QString gameState() const { return m_gameState; }
     int score() const { return m_score; }
-    QString dangerLevel() const { return m_dangerLevel; }
     bool inMenu() const { return m_inMenu; }
     int elapsedSeconds() const { return m_elapsedSeconds; }
 
@@ -58,22 +56,18 @@ public:
     Q_INVOKABLE int  getLevelHighScore(int levelNumber) const;
     Q_INVOKABLE int  getLevelBestTime(int levelNumber) const;
     Q_INVOKABLE bool isLevelCompleted(int levelNumber) const;
+    Q_INVOKABLE void resetProgress(); // apaga todo o progresso (recordes, tempos, níveis concluídos)
 
-    // apaga todo o progresso (recordes, tempos, níveis concluídos)
-    Q_INVOKABLE void resetProgress();
 
 signals:
     void moveCountChanged();
     void gameStateChanged();
     void scoreChanged();
-    void dangerLevelChanged();
     void inMenuChanged();
     void dataChanged();
     void elapsedSecondsChanged();
     void showNotification(QString message);
-
-    // emitido quando o progresso é apagado, para o QML refrescar o menu
-    void progressReset();
+    void progressReset(); // emitido quando o progresso é apagado, para o QML refrescar o menu
 
 private:
     struct ParkedBusInfo {
@@ -94,9 +88,8 @@ private:
     void checkGameStatus();
     LevelData readLevelFromJsonWorker(int levelNumber);
     void applyLoadedLevel(LevelData data, int levelNumber);
-
-    void performNextMoveStep();  // movimento passo-a-passo
-
+    void performNextMoveStep(); // movimento passo-a-passo
+ 
     Board m_board;
     std::vector<ParkedBusInfo> m_parkedBuses;
     QList<Passenger> m_passengerQueue;
@@ -105,7 +98,6 @@ private:
     int m_currentLevel;
     QString m_gameState;
     int m_score;
-    QString m_dangerLevel;
     bool m_inMenu;
     int m_initialPassengersCount;
 
